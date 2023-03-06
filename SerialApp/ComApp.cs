@@ -845,15 +845,19 @@ public partial class CommsApp : SerialLoggingAppForm
 
         var loggingMenu = new ToolStripMenuItem("Logging");
         var viewLogsMenuItem = new ToolStripMenuItem("View Logs");
+        var exportLogsMenuItem = new ToolStripMenuItem("Save Logs To Text File");
         var enableLoggingMenuItem = new ToolStripMenuItem("Enable Logging");
         var deleteLoggingMenuItem = new ToolStripMenuItem("Delete Logs");
+
         viewLogsMenuItem.Click += new EventHandler((_,_) => OnViewLogs());
         enableLoggingMenuItem.CheckOnClick = true;
+        exportLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDbData());
         enableLoggingMenuItem.Click += OnLoggingChanged;
         deleteLoggingMenuItem.Click += new EventHandler((_,_) => OnLoggingDelete());
 
         loggingMenu.DropDownItems.Add(enableLoggingMenuItem);
         loggingMenu.DropDownItems.Add(viewLogsMenuItem);
+        loggingMenu.DropDownItems.Add(exportLogsMenuItem);
         loggingMenu.DropDownItems.Add(deleteLoggingMenuItem);
 
         var settingsMenuItem = new ToolStripMenuItem("Settings");
@@ -1052,15 +1056,19 @@ public partial class CommsApp : SerialLoggingAppForm
 
         var loggingMenu = new ToolStripMenuItem("Logging");
         var viewLogsMenuItem = new ToolStripMenuItem("View Logs");
+        var exportLogsMenuItem = new ToolStripMenuItem("Save Logs To Text File");
         var enableLoggingMenuItem = new ToolStripMenuItem("Enable Logging");
         var deleteLoggingMenuItem = new ToolStripMenuItem("Delete Logs");
+
         viewLogsMenuItem.Click += new EventHandler((_,_) => OnViewLogs());
         enableLoggingMenuItem.CheckOnClick = true;
+        exportLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDbData());
         enableLoggingMenuItem.Click += OnLoggingChanged;
         deleteLoggingMenuItem.Click += new EventHandler((_,_) => OnLoggingDelete());
 
         loggingMenu.DropDownItems.Add(enableLoggingMenuItem);
         loggingMenu.DropDownItems.Add(viewLogsMenuItem);
+        loggingMenu.DropDownItems.Add(exportLogsMenuItem);
         loggingMenu.DropDownItems.Add(deleteLoggingMenuItem);
 
         var settingsMenuItem = new ToolStripMenuItem("Settings");
@@ -1439,7 +1447,7 @@ public partial class CommsApp : SerialLoggingAppForm
             if(serialPort.AvailableBytes > 0 && rxData.Length > 0)
             {
                 var currentData = serialPort.ReadExisting(100);
-                
+
                 if (rxIncreaseOnChars == true)
                 {
                     if (currentRxIndex >= rxBufferSize)

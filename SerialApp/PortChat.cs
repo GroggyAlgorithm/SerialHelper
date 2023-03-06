@@ -1319,6 +1319,7 @@ public class PortChat
             {
 
                 returnValue = _serialPort.ReadByte();
+                _serialPort.DiscardInBuffer();
             }
         }
 
@@ -1342,6 +1343,7 @@ public class PortChat
             {
 
                 returnValue = _serialPort.ReadExisting();
+                _serialPort.DiscardInBuffer();
             }
         }
 
@@ -1367,6 +1369,7 @@ public class PortChat
                     returnValue += _serialPort.ReadExisting();
                 }
                 
+                _serialPort.DiscardInBuffer();
             }
         }
 
