@@ -88,17 +88,11 @@ public class PortChat
     
 
 
-    public void SetToUtf8()
-    {
-        _serialPort.Encoding = System.Text.Encoding.UTF8;
-    }
-
-    public void SetToAscii()
-    {
-        _serialPort.Encoding = System.Text.Encoding.ASCII;
-    }
-
     
+
+    /// <summary>
+    /// Class constructor
+    /// </summary>
     public PortChat()
     {
         currentComPort = "COM1";
@@ -116,6 +110,7 @@ public class PortChat
                 _serialPort.Close();
             }
         }
+
         _serialPort = new SerialPort();
         _serialPort.ReadTimeout = currentReadTimeout;
         _serialPort.WriteTimeout = currentWriteTimeout;
@@ -124,19 +119,42 @@ public class PortChat
     
     
     
+    /// <summary>
+    /// Class constructor with passable serial port parameters
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="readTimeout"></param>
+    /// <param name="writeTimeout"></param>
+    /// <param name="parity"></param>
+    /// <param name="dataBits"></param>
+    /// <param name="stopBit"></param>
+    /// <param name="handshake"></param>
     public PortChat(int desiredPort, int baudrate=1200, int readTimeout = 500, int writeTimeout = 500, Parity parity = Parity.None, DATA_BITS dataBits = DATA_BITS.Eight, StopBits stopBit = StopBits.One,
     Handshake handshake = Handshake.None)
     {
         currentComPort = "";
+        //Set the desired port
         SetDesiredPort(desiredPort);
+
+        //Set the desired baud rate
         SetCustomBaud(baudrate);
+
+        //Set the desired timeouts
         SetReadTimeout(readTimeout);
         SetWriteTimeout(writeTimeout);
 
-        currentParity = parity;
-        currentDataBits = (int)dataBits;
-        currentStopBits = StopBits.One;
-        currentHandshake = Handshake.None;
+        //Set the parity
+        SetParity(parity);
+
+        //Set the data bits
+        SetDataBits(dataBits);
+
+        //Set the stop bits
+        SetStopBit(stopBit);
+
+        //Set the handshake
+        SetHandshake(handshake);
 
         if(_serialPort != null)
         {
@@ -155,19 +173,42 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Class constructor with passable serial port parameters
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="readTimeout"></param>
+    /// <param name="writeTimeout"></param>
+    /// <param name="parity"></param>
+    /// <param name="dataBits"></param>
+    /// <param name="stopBit"></param>
+    /// <param name="handshake"></param>
     public PortChat(string desiredPort, int baudrate=1200, int readTimeout = 500, int writeTimeout = 500, Parity parity = Parity.None, DATA_BITS dataBits = DATA_BITS.Eight, StopBits stopBit = StopBits.One,
     Handshake handshake = Handshake.None)
     {
         currentComPort = "";
+        //Set the desired port
         SetDesiredPort(desiredPort);
+
+        //Set the desired baud rate
         SetCustomBaud(baudrate);
+
+        //Set the desired timeouts
         SetReadTimeout(readTimeout);
         SetWriteTimeout(writeTimeout);
 
-        currentParity = parity;
-        currentDataBits = (int)dataBits;
-        currentStopBits = StopBits.One;
-        currentHandshake = Handshake.None;
+        //Set the parity
+        SetParity(parity);
+
+        //Set the data bits
+        SetDataBits(dataBits);
+
+        //Set the stop bits
+        SetStopBit(stopBit);
+
+        //Set the handshake
+        SetHandshake(handshake);
 
         if(_serialPort != null)
         {
@@ -184,12 +225,71 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Sets the serial port to the specified encoding
+    /// </summary>
+    public void SetToUtf8()
+    {
+        if(_serialPort != null) _serialPort.Encoding = System.Text.Encoding.UTF8;
+    }
+
+
+
+    /// <summary>
+    /// Sets the serial port to the specified encoding
+    /// </summary>
+    public void SetToAscii()
+    {
+        if(_serialPort != null) _serialPort.Encoding = System.Text.Encoding.ASCII;
+    }
+
+
+
+    /// <summary>
+    /// Sets the serial port to the specified encoding
+    /// </summary>
+    public void SetEncoding(System.Text.Encoding encoding)
+    {
+        if(_serialPort != null && encoding != null) _serialPort.Encoding = encoding;
+    }
+
+
+
+    /// <summary>
+    /// Sets the serial ports buffer size to the specified value
+    /// </summary>
+    public void SetReadBufferSize(int bufferSize)
+    {
+        if(_serialPort != null && bufferSize > 0 && bufferSize < 100) _serialPort.ReadBufferSize = bufferSize;
+    }
+
+
+
+    /// <summary>
+    /// Sets the serial ports buffer size to the specified value
+    /// </summary>
+    public void SetWriteBufferSize(int bufferSize)
+    {
+        if(_serialPort != null && bufferSize > 0 && bufferSize < 100) _serialPort.WriteBufferSize = bufferSize;
+    }
+
+
+
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="dataBits"></param>
+    /// <returns></returns>
     public bool SetDataBits(string dataBits)
     {
         bool status = false;
 
+        //If the standard values contains the passed value...
         if(DataBitOptions.TryGetValue(dataBits,out var dbOp))
         {
+            //Set the status and variable
             currentDataBits = (int)dbOp;
             status = true;
         }
@@ -198,21 +298,39 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="dataBits"></param>
+    /// <returns></returns>
     public bool SetDataBits(DATA_BITS dataBits)
     {
+        //Set the status and variable
         currentDataBits = (int)dataBits;
         return true;
     }
 
 
+
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="baudrate"></param>
+    /// <returns></returns>
     public bool SetCustomBaud(string baudrate)
     {
         bool status = false;
 
+        //If the passed value was parsed good...
         if(int.TryParse(baudrate,out var intBaud))
         {
+            //If the value is within range...
             if(intBaud > 0 && intBaud <= 128000)
             {
+                //Set the status and variable
                 currentBaud = intBaud;
                 status = true;
             }
@@ -222,14 +340,23 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="baudrate"></param>
+    /// <returns></returns>
     public bool SetStandardBaud(string baudrate)
     {
         bool status = false;
 
+        //If the standard values contains the passed value...
         if(StandardPossibleBauds.Contains(baudrate) == true)
         {
+            //If the passed value was parsed good...
             if(int.TryParse(baudrate,out var intBaud))
             {
+                //Set the status and variable
                 currentBaud = intBaud;
                 status = true;
             }
@@ -239,11 +366,20 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="baudrate"></param>
+    /// <returns></returns>
     public bool SetCustomBaud(int baudrate)
     {
         bool status = false;
+
+        //If the passed value is within range...
         if(baudrate > 0 && baudrate <= 128000)
         {
+            //Set the status and variable
             currentBaud = baudrate;
             status = true;
         }
@@ -252,20 +388,35 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="handshake"></param>
+    /// <returns></returns>
     public bool SetHandshake(Handshake handshake)
     {
+        //Set the status and variable
         this.currentHandshake = handshake;
         return true;
     }
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="handshake"></param>
+    /// <returns></returns>
     public bool SetHandshake(string handshake)
     {
         bool status = false;
 
+        //If the standard values contains the passed value...
         if(HandShakeOptions.TryGetValue(handshake,out var hsOption))
         {
+            //Set the status and variable
             status = true;
             this.currentHandshake = hsOption;
         }
@@ -274,20 +425,36 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="stopBit"></param>
+    /// <returns></returns>
     public bool SetStopBit(StopBits stopBit)
     {
+        //Set the status and variable
         this.currentStopBits = stopBit;
         return true;
     }
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="stopBit"></param>
+    /// <returns></returns>
     public bool SetStopBit(string stopBit)
     {
         bool status = false;
 
+        //If the standard values contains the passed value...
         if(StopBitOptions.TryGetValue(stopBit,out var sbOption))
         {
+            //Set the status and variable
             status = true;
             this.currentStopBits = sbOption;
         }
@@ -297,20 +464,35 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="parity"></param>
+    /// <returns></returns>
     public bool SetParity(Parity parity)
     {
+        //Set the status and variable
         this.currentParity = parity;
         return true;
     }
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="parity"></param>
+    /// <returns></returns>
     public bool SetParity(string parity)
     {
         bool status = false;
 
+        //If the standard values contains the passed value...
         if(ParityOptions.TryGetValue(parity,out var parOption))
         {
+            //Set the status and variable
             status = true;
             this.currentParity = parOption;
         }
@@ -320,12 +502,20 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
     public bool SetReadTimeout(int timeout)
     {
         bool status = false;
 
+        //If the passed value is within range...
         if(timeout > 0 && timeout < 10000)
         {
+            //Set the status and variable
             this.currentReadTimeout = timeout;
             status = true;
         }
@@ -335,19 +525,30 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
     public bool SetReadTimeout(string timeout)
     {
         bool status = false;
+
+        //If the passed value was parsed good...
         if(int.TryParse(timeout,out var to))
         {
             if(StandardTransmissionDelayOptions.Contains(timeout))
             {
+                //Set the status and variable
                 this.currentReadTimeout = to;
                 status = true;
             }
         }
+        //else if the timeout is forever or none...
         else if(timeout.ToLower() == "forever" || timeout.ToLower() == "none")
         {
+            //Set the timeout to -1
             this.currentReadTimeout = -1;
             status = true;
         }
@@ -356,12 +557,20 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
     public bool SetWriteTimeout(int timeout)
     {
         bool status = false;
 
+        //If the passed value is within range...
         if(timeout > 0 && timeout < 10000)
         {
+            //Set the status and variable
             this.currentWriteTimeout = timeout;
             status = true;
         }
@@ -371,19 +580,31 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
     public bool SetWriteTimeout(string timeout)
     {
         bool status = false;
+
+        //If the passed value was parsed good...
         if(int.TryParse(timeout,out var to))
         {
+            //If the standard values contain the parsed value...
             if(StandardTransmissionDelayOptions.Contains(timeout))
             {
+                //Set the status and variable
                 this.currentWriteTimeout = to;
                 status = true;
             }
         }
+        //else if the timeout is forever or none...
         else if(timeout.ToLower() == "forever" || timeout.ToLower() == "none")
         {
+            //Set the timeout to -1
             this.currentWriteTimeout = -1;
             status = true;
         }
@@ -392,15 +613,26 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <returns></returns>
     public bool SetDesiredPort(string desiredPort)
     {
         bool status  = false;
-
+        
+        //If the passed string is not null and is not empty and is not white space...
         if(!string.IsNullOrEmpty(desiredPort) && !string.IsNullOrWhiteSpace(desiredPort))
         {
+            //If the available ports contains the passed port...
             if(AvailablePorts.Contains(desiredPort))
             {
+                //Set the current port variable
                 currentComPort = desiredPort;
+
+                //Set the status to true
                 status = true;
             }
         }
@@ -410,13 +642,23 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Set thes class variable to the one passed if requirements are met.
+    /// Returns the status of if it was set good
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <returns></returns>
     public bool SetDesiredPort(int desiredPort)
     {
         bool status  = false;
 
+        //If the available ports contains the passed port...
         if(AvailablePorts.Contains("COM"+desiredPort))
         {
+            //Set the current port variable
             currentComPort = "COM"+desiredPort;
+
+            //Set the status to true
             status = true;
         }
         
@@ -426,98 +668,174 @@ public class PortChat
 
 
 
-    public void ReloadPort(string desiredPort, int baudrate=1200, int readTimeout = 500, int writeTimeout = 500, Parity parity = Parity.None, DATA_BITS dataBits = DATA_BITS.Eight, StopBits stopBit = StopBits.One,
+    /// <summary>
+    /// Reloads the port, no try catch
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="readTimeout"></param>
+    /// <param name="writeTimeout"></param>
+    /// <param name="parity"></param>
+    /// <param name="dataBits"></param>
+    /// <param name="stopBit"></param>
+    /// <param name="handshake"></param>
+    public void ReloadPort(string desiredPort, int baudrate = 1200, int readTimeout = 500, int writeTimeout = 500, Parity parity = Parity.None, DATA_BITS dataBits = DATA_BITS.Eight, StopBits stopBit = StopBits.One,
     Handshake handshake = Handshake.None)
     {
-        var portNames = AvailablePorts;
+        //Clear the current timeout
         currentComPort = "";
 
-       
+        //Set the desired port
+        SetDesiredPort(desiredPort);
 
-        if(!string.IsNullOrEmpty(desiredPort) && !string.IsNullOrWhiteSpace(desiredPort))
+        //Set the desired baud rate
+        SetCustomBaud(baudrate);
+
+        //Set the desired timeouts
+        SetReadTimeout(readTimeout);
+        SetWriteTimeout(writeTimeout);
+
+        //Set the parity
+        SetParity(parity);
+
+        //Set the data bits
+        SetDataBits(dataBits);
+
+        //Set the stop bits
+        SetStopBit(stopBit);
+
+        //Set the handshake
+        SetHandshake(handshake);
+
+
+
+
+        //If the serial port is not null...
+        if (_serialPort != null)
         {
-            if(portNames.Contains(desiredPort))
+            //If the serial port is open...
+            if (_serialPort.IsOpen == true)
             {
-                currentComPort = desiredPort;
+                //Try to close the port
+                TryClosePort();
+                // status = true;
             }
-            
-        }
-        
-        if(string.IsNullOrEmpty(currentComPort))
-        {
-            throw new Exception("The port name must be real");
-        }
-
-        if(baudrate > 0)
-        {
-            currentBaud = baudrate;
         }
         else
         {
-            throw new Exception("Baud rate must be more than 0");
+            _serialPort = new SerialPort();
         }
-        currentParity = parity;
-        currentDataBits = (int)dataBits;
-        currentStopBits = StopBits.One;
-        currentReadTimeout = readTimeout;
-        currentWriteTimeout = writeTimeout;
-        currentHandshake = Handshake.None;
 
-        if(_serialPort != null)
-        {
-            if(_serialPort.IsOpen)
-            {
-                _serialPort.Close();
-            }
-        }
-        _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+        //Reinitialize the serial port
+        //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+
+        //Set any variables
+        _serialPort.PortName = currentComPort;
+        _serialPort.BaudRate = currentBaud;
+        _serialPort.Parity = currentParity;
+        _serialPort.DataBits = currentDataBits;
+        _serialPort.StopBits = currentStopBits;
         _serialPort.ReadTimeout = currentReadTimeout;
         _serialPort.WriteTimeout = currentWriteTimeout;
+        _serialPort.Handshake = currentHandshake;
+
     }
 
 
 
+    /// <summary>
+    /// Reloads the port, no try catch
+    /// </summary>
     public void ReloadPort()
     {
+        //If the serial port is not null...
         if(_serialPort != null)
         {
+            //If the serial port is open...
             if(_serialPort.IsOpen == true)
             {
-                _serialPort.Close();
+                //Try to close the port
+                TryClosePort();
+                // status = true;
             }
         }
+        else
+        {
+            _serialPort = new SerialPort();
+        }
 
-        _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+        //Reinitialize the serial port
+        //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+        
+        //Set any variables
+        _serialPort.PortName = currentComPort;
+        _serialPort.BaudRate = currentBaud;
+        _serialPort.Parity = currentParity;
+        _serialPort.DataBits = currentDataBits;
+        _serialPort.StopBits = currentStopBits;
         _serialPort.ReadTimeout = currentReadTimeout;
         _serialPort.WriteTimeout = currentWriteTimeout;
+        _serialPort.Handshake = currentHandshake;
     }
 
 
+
+    /// <summary>
+    /// Trys to reload and open the port, returns the status of if it opened or not
+    /// </summary>
+    /// <returns></returns>
     public bool TryReloadAndOpen()
     {
         bool status = false;
+
+        //try to...
         try
         {
+            //If the serial port is not null...
             if(_serialPort != null)
             {
+                //If the serial port is open...
                 if(_serialPort.IsOpen)
                 {
-                    _serialPort.Close();
+                    //Try to close the port
+                    status = !TryClosePort();
+                    // _serialPort.Close();
                 }
             }
+            else
+            {
+                _serialPort = new SerialPort();
+            }
 
+            //If the Available ports contains the current com port string...
             if(AvailablePorts.Contains(currentComPort) == true)
             {
-                _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+                //Reinitialize the serial port
+                //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+                
+                //Set any variables
+                _serialPort.PortName = currentComPort;
+                _serialPort.BaudRate = currentBaud;
+                _serialPort.Parity = currentParity;
+                _serialPort.DataBits = currentDataBits;
+                _serialPort.StopBits = currentStopBits;
                 _serialPort.ReadTimeout = currentReadTimeout;
                 _serialPort.WriteTimeout = currentWriteTimeout;
+                _serialPort.Handshake = currentHandshake;
 
-                status = true;
+                //Open the port
+                _serialPort.Open();
+
+                //Set the status to the serial ports open status
+                status = _serialPort.IsOpen;
+                //status = true;
             }
             
         }
+        //Catch any exceptions and...
         catch
         {
+            //Make sure to set status to false
             status = false;
         }
 
@@ -525,41 +843,76 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Trys to open the port, returns the status of if it opened or not
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="parity"></param>
+    /// <param name="stopBit"></param>
+    /// <returns></returns>
     public bool TryOpenPort(string desiredPort, string baudrate, string parity, string stopBit)
     {
         bool status = false;
 
+        //If the serial port is not null...
         if(_serialPort != null)
         {
+            //If the serial port is open...
             if(_serialPort.IsOpen == true)
             {
-                status = true;
+                //Try to close the port
+                status = !TryClosePort();
+                // status = true;
             }
+        }
+        else
+        {
+            _serialPort = new SerialPort();
         }
 
         //If still false at this Point...
         if(status == false)
         {
+            //try to...
             try
             {
-
-                currentDataBits = 8;
-                currentHandshake = Handshake.None;
-                currentReadTimeout = 500;
-                currentWriteTimeout = 500;
-
+                
+                //If setting the values passed worked...
                 if(SetDesiredPort(desiredPort) && SetStandardBaud(baudrate) && SetStopBit(stopBit) && SetParity(parity))
                 {
-                    _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+                    //Set any unadressed variables
+                    currentDataBits = 8;
+                    currentHandshake = Handshake.None;
+                    currentReadTimeout = 500;
+                    currentWriteTimeout = 500;
+
+                    //Reinitialize the serial port
+                    //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+                    
+                    //Set any variables
+                    _serialPort.PortName = currentComPort;
+                    _serialPort.BaudRate = currentBaud;
+                    _serialPort.Parity = currentParity;
+                    _serialPort.DataBits = currentDataBits;
+                    _serialPort.StopBits = currentStopBits;
                     _serialPort.ReadTimeout = currentReadTimeout;
                     _serialPort.WriteTimeout = currentWriteTimeout;
                     _serialPort.Handshake = currentHandshake;
+
+                    //Open the port
                     _serialPort.Open();
-                    status = true;
+
+                    //Set the status to the serial ports open status
+                    status = _serialPort.IsOpen;
+                    //status = true;
                 }
             }
+            //Catch any exception and...
             catch
             {
+                //Set the status to false
                 status = false;
             }
             
@@ -569,85 +922,160 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Trys to open the port, returns the status of if it opened or not
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="parity"></param>
+    /// <param name="stopBit"></param>
+    /// <param name="handshake"></param>
+    /// <param name="readTimeout"></param>
+    /// <param name="writeTimeout"></param>
+    /// <param name="dataBits"></param>
+    /// <returns></returns>
     public bool TryOpenPort(string desiredPort, string baudrate, string parity, string stopBit, string handshake,
         string readTimeout, string writeTimeout, string dataBits)
     {
         bool status = false;
 
-        if(_serialPort != null)
+        //If the serial port is not null...
+        if (_serialPort != null)
         {
-            if(_serialPort.IsOpen == true)
+            //If the serial port is open...
+            if (_serialPort.IsOpen == true)
             {
-                status = true;
+                //Try to close the port
+                status = !TryClosePort();
+                // status = true;
             }
+        }
+        else
+        {
+            _serialPort = new SerialPort();
         }
 
         //If still false at this Point...
-        if(status == false)
+        if (status == false)
         {
+            //try to...
             try
             {
-                if(SetDesiredPort(desiredPort) && SetStandardBaud(baudrate) && SetStopBit(stopBit) && SetParity(parity))
+                //If setting part 1 of the values passed worked...
+                if (SetDesiredPort(desiredPort) && SetStandardBaud(baudrate) && SetStopBit(stopBit) && SetParity(parity))
                 {
-                    if(SetDataBits(dataBits) && SetHandshake(handshake) && SetReadTimeout(readTimeout) && SetWriteTimeout(writeTimeout))
+                    //If setting these values worked...
+                    if (SetDataBits(dataBits) && SetHandshake(handshake) && SetReadTimeout(readTimeout) && SetWriteTimeout(writeTimeout))
                     {
-                        _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+
+                        //Reinitialize the serial port
+                        //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+                        
+                        //Set any variables
+                        _serialPort.PortName = currentComPort;
+                        _serialPort.BaudRate = currentBaud;
+                        _serialPort.Parity = currentParity;
+                        _serialPort.DataBits = currentDataBits;
+                        _serialPort.StopBits = currentStopBits;
                         _serialPort.ReadTimeout = currentReadTimeout;
                         _serialPort.WriteTimeout = currentWriteTimeout;
                         _serialPort.Handshake = currentHandshake;
+
+                        //Open the port
                         _serialPort.Open();
-                        status = true;
+
+                        //Set the status to the serial ports open status
+                        status = _serialPort.IsOpen;
+                        //status = true;
                     }
-                    
+
                 }
             }
+            //Catch any exceptions and...
             catch
             {
+                //Make sure to set status to false
                 status = false;
             }
-            
+
         }
         return status;
     }
 
 
 
-    
+    /// <summary>
+    /// Trys to open the port, returns the status of if it opened or not
+    /// </summary>
+    /// <param name="desiredPort"></param>
+    /// <param name="baudrate"></param>
+    /// <param name="parity"></param>
+    /// <param name="stopBit"></param>
+    /// <param name="handshake"></param>
+    /// <returns></returns>
     public bool TryOpenPort(string desiredPort, string baudrate, string parity, string stopBit, string handshake)
     {
         bool status = false;
 
+        //If the serial port is not null...
         if(_serialPort != null)
         {
+            //If the serial port is open...
             if(_serialPort.IsOpen == true)
             {
-                status = true;
+                //Try to close the port
+                status = !TryClosePort();
+                // status = true;
             }
+        }
+        else
+        {
+            _serialPort = new SerialPort();
         }
 
         //If still false at this Point...
         if(status == false)
         {
+            //try to...
             try
             {
+                //If setting part 1 of the values passed worked...
                 if(SetDesiredPort(desiredPort) && SetStandardBaud(baudrate) && SetStopBit(stopBit) && SetParity(parity))
                 {
+                    //If setting these values worked...
                     if(SetHandshake(handshake))
                     {
+                        //Set any unadressed variables
                         currentReadTimeout = 500;
                         currentWriteTimeout = 500;
-                        _serialPort = new SerialPort(currentComPort,currentBaud,currentParity,currentDataBits,currentStopBits);
+
+                        //Reinitialize the serial port
+                        //_serialPort = new SerialPort(currentComPort, currentBaud, currentParity, currentDataBits, currentStopBits);
+                        
+                        //Set any variables
+                        _serialPort.PortName = currentComPort;
+                        _serialPort.BaudRate = currentBaud;
+                        _serialPort.Parity = currentParity;
+                        _serialPort.DataBits = currentDataBits;
+                        _serialPort.StopBits = currentStopBits;
                         _serialPort.ReadTimeout = currentReadTimeout;
                         _serialPort.WriteTimeout = currentWriteTimeout;
                         _serialPort.Handshake = currentHandshake;
+
+                        //Open the port
                         _serialPort.Open();
-                        status = true;
+
+                        //Set the status to the serial ports open status
+                        status = _serialPort.IsOpen;
+                        //status = true;
                     }
                     
                 }
             }
+            //Catch any exceptions and...
             catch
             {
+                //Make sure to set status to false
                 status = false;
             }
             
@@ -657,22 +1085,34 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Trys to open the port, returns the status of if it opened or not
+    /// </summary>
+    /// <returns></returns>
     public bool TryOpenPort()
     {
         bool status = false;
 
+        //If the serial port is not null...
         if(_serialPort != null)
         {
+            //If the serial port is open...
             if(_serialPort.IsOpen)
             {
+                //Set the status to true
                 status = true;
             }
+            //else...
             else
             {
+                //try to...
                 try
                 {
+                    //Open the port and set the status 
                     _serialPort.Open();
-                    status = true;
+
+                    //Set the status to the serial ports open status
+                    status = _serialPort.IsOpen;
                 }
                 catch
                 {
@@ -685,7 +1125,10 @@ public class PortChat
     }
 
 
-
+    /// <summary>
+    /// Wait callback port close
+    /// </summary>
+    /// <param name="obj"></param>
     protected void ClosePort(object? obj)
     {
         if(_serialPort.IsOpen)
@@ -702,32 +1145,47 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Trys to close the port, returns the status of if it closed or not
+    /// </summary>
+    /// <returns></returns>
     public bool TryClosePort()
     {
         bool status = false;
-        status = ThreadPool.QueueUserWorkItem(new WaitCallback(ClosePort));
-        // if(_serialPort.IsOpen)
-        // {
-        //     try
-        //     {
-        //         _serialPort.Close();
-        //         status = true;
-        //     }
-        //     catch
-        //     {
-        //         status = false;
-        //     }
-        // }
-        // else
-        // {
-        //     status = false;
-        // }
-        
 
+        //Schedule closing the port and set the status to the queue response
+        status = ThreadPool.QueueUserWorkItem(new WaitCallback(ClosePort));
+
+        //If queued...
+        if(status == true)
+        {
+            //Set a variable for safety, avoid infinite loops
+            short safetyCounts = short.MaxValue - 1;
+
+            //do this...
+            do
+            {
+                //Set the status to the opposite of the port being open
+                status = !((_serialPort.IsOpen));
+
+                //Subtract from the safety count
+                safetyCounts--;
+
+            } 
+            //While the port is open and the safety counts are above 0
+            while ((_serialPort.IsOpen) && (safetyCounts >= 0));
+
+        }
+        
         return status;
     }
 
 
+
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="s"></param>
     public void WriteToPort(string s)
     {
         if(_serialPort != null)
@@ -740,6 +1198,11 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="c"></param>
     public void WriteToPort(char c)
     {
         if(_serialPort != null)
@@ -752,6 +1215,11 @@ public class PortChat
     }
 
 
+
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="b"></param>
     public void WriteToPort(byte b)
     {
         if(_serialPort != null)
@@ -768,13 +1236,16 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="bytes"></param>
     public void WriteToPort(byte[] bytes)
     {
         if(_serialPort != null)
         {
             if(_serialPort.IsOpen)
             {
-
                 _serialPort.Write(bytes,0,bytes.Length);
             }
         }
@@ -782,6 +1253,10 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="chars"></param>
     public void WriteToPort(char[] chars)
     {
         if(_serialPort != null)
@@ -796,6 +1271,44 @@ public class PortChat
 
 
 
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="value"></param>
+    public void WriteToPort(ICollection<char> value)
+    {
+        if(_serialPort != null)
+        {
+            if(_serialPort.IsOpen)
+            {
+                _serialPort.Write(value.ToArray(),0,value.Count);
+            }
+        }
+    }
+
+
+
+    /// <summary>
+    /// Writes the passed value to the port
+    /// </summary>
+    /// <param name="value"></param>
+    public void WriteToPort(ICollection<byte> value)
+    {
+        if(_serialPort != null)
+        {
+            if(_serialPort.IsOpen)
+            {
+                _serialPort.Write(value.ToArray(),0,value.Count);
+            }
+        }
+    }
+
+
+
+    /// <summary>
+    /// Waits and reads a byte from the port
+    /// </summary>
+    /// <returns></returns>
     public int WaitRead()
     {
         int returnValue = 0;
@@ -814,7 +1327,11 @@ public class PortChat
     }
 
 
-
+    
+    /// <summary>
+    /// Reads any stromgs that exist on the port
+    /// </summary>
+    /// <returns></returns>
     public string ReadExisting()
     {
         string returnValue = "";
@@ -825,6 +1342,31 @@ public class PortChat
             {
 
                 returnValue = _serialPort.ReadExisting();
+            }
+        }
+
+        return returnValue;
+    }
+
+
+    
+    /// <summary>
+    /// Reads any stromgs that exist on the port
+    /// </summary>
+    /// <returns></returns>
+    public string ReadExisting(int maxCount)
+    {
+        string returnValue = "";
+
+        if(_serialPort != null)
+        {
+            if(_serialPort.IsOpen)
+            {
+                while(maxCount > 0 && AvailableBytes > 0)
+                {
+                    returnValue += _serialPort.ReadExisting();
+                }
+                
             }
         }
 

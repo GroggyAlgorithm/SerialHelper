@@ -1,3 +1,97 @@
+using System.Text.RegularExpressions;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+
+
+public static class ToolStripExtensions 
+{
+    public static void Dispose(this ToolStripItemCollection tsmic)
+    {
+        foreach(ToolStripDropDownItem item in tsmic)
+        {
+            item.Dispose();
+        }
+    }
+
+
+    
+    public static void AddRange(this ToolStripItemCollection tsmic, ICollection collection)
+    {
+        foreach(var item in collection)
+        {   
+            if(item.GetType() == typeof(char))
+            {
+                var asChar = (char)item;
+
+                if (asChar < ' ')
+                // if (char.IsControl(asChar))
+                {
+                    tsmic.Add(Regex.Unescape(asChar.ToString()));
+                    // tsmic.Add((Regex.Escape(asChar.ToString())));
+
+                }
+                else
+                {
+                    tsmic.Add(item.ToString());
+                }
+
+
+            }
+            else
+            {
+                tsmic.Add(item.ToString());
+            }
+        }
+    }
+
+
+    public static void AddDropdownRange(this ToolStripMenuItem tsmic, ICollection collection)
+    {
+        foreach(var item in collection)
+        {
+            if(item.GetType() == typeof(char))
+            {
+                var asChar = (char)item;
+
+                // if(char.IsControl(asChar))
+                if (asChar < ' ')
+                {
+                    tsmic.DropDownItems.Add(Regex.Unescape(asChar.ToString()));
+                    // tsmic.DropDownItems.Add((Regex.Escape(asChar.ToString())));
+                    // tsmic.DropDownItems.Add((Regex.Escape(asChar.ToString())));
+                    // switch(asChar)
+                    // {
+                    //     case '\n':
+                    //         tsmic.DropDownItems.Add("\\n");
+                    //     break;
+                        
+                    //     case '\f':
+                    //         tsmic.DropDownItems.Add("\\f");
+                    //     break;
+                        
+                    //     case '\r':
+                    //         tsmic.DropDownItems.Add("\\r");
+                    //     break;
+
+                    //     default:
+                    //         tsmic.DropDownItems.Add(((byte)(asChar)).ToString());
+                    //     break;
+                    // };
+                    // tsmic.DropDownItems.Add(char.GetNumericValue(asChar).ToString());
+                }
+                else
+                {
+                    tsmic.DropDownItems.Add(item.ToString());
+                }
+            }
+            else
+            {
+                tsmic.DropDownItems.Add(item.ToString());
+            }
+        }
+    }
+}
 
 
 
@@ -7,6 +101,150 @@
 public partial class CommsApp : SerialLoggingAppForm
 {
     ToolStripMenuItem previousTxModeItem = new ToolStripMenuItem();
+
+
+    void ClearRxItemsClick()
+    {
+        for(var i = 0; i < rxData.Count(); i++)
+        {
+            var tb = rxData[i];
+            tb.Text = "";
+        }
+    }
+
+
+    void ClearTxItemsClick()
+    {
+        for(var i = 0; i < txData.Count(); i++)
+        {
+            var tb = txData[i];
+            tb.Text = "";
+        }
+    }
+
+
+    // void PossibleCharTextChange(ToolStripMenuItem tsmi, TextBox tb)
+    // {
+    //     var tbText = tb.Text;
+    //     if(poss)
+    //     foreach(var item in tsmi.DropDownItems)
+    //     {
+            
+    //     }
+
+    // }
+
+    #warning unfinished function here
+    void RxSetupIncreaseChars(object? obj, EventArgs e)
+    {
+        if(obj.GetType() == typeof(ToolStripMenuItem))
+        {
+            var asTsmi = (ToolStripMenuItem)(obj);
+
+            asTsmi.DropDownItems.Clear();
+
+            foreach(var item in possibleIncreaseCharacters)
+            {
+                // TextBox tb = new TextBox();
+                // tb.AcceptsReturn = false;
+                // tb.AcceptsTab = false;
+                // tb.Text = (item.ToString());
+                // tb.ReadOnly = true;
+                
+                asTsmi.DropDownItems.Add(item.ToString());
+                // tb.MaxLength = 2;
+                // tb.TextChanged += new EventHandler((_,_) => PossibleCharTextChange(asTsmi, tb) );
+            }
+
+        }
+    }
+
+
+    void OnEnableAll()
+    {
+        
+        if(rxBufferSize <= 0)
+        {
+            rxBufferSize = 3;
+            rxBufferTextBox.Text = "3";
+            SetRxDataBoxes();
+        }
+
+        if(txBufferSize <= 0)
+        {
+            txBufferSize = 3;
+            txBufferTextBox.Text = "3";
+            SetTxDataBoxes();
+        }
+
+        rxEnabled = true;
+        rxEnableBox.Checked = true;
+
+        txEnabled = true;
+        txEnableBox.Checked = true;
+        
+    }
+
+
+    void OnEnableRepeats()
+    {
+        overwriteRxData = true;
+        reapeatTxData = true;
+        txRepeatBox.Checked = true;
+        rxRepeatBox.Checked = true;
+    }
+
+
+
+    void ToggleRxIncreaseOnChar()
+    {
+        this.rxIncreaseOnChars = !this.rxIncreaseOnChars;
+    }
+
+
+
+    void TxRxClickNoAuto()
+    {
+        if(serialPort.IsOpen)
+        {
+            OnPortStatusChange();
+        }
+    }
+
+
+     void ClosePortEvent()
+    {
+        rxEnabled = false;
+        txEnabled = false;
+        currentRxIndex = 0;
+        currentTxIndex = 0;
+
+        rxEnableBox.Checked = false;
+        txEnableBox.Checked = false;
+        OnPortStatusChange();
+        
+    }
+
+
+    void VoidKeypressHandler(object? o, KeyPressEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+
+    void StatusButtonClick()
+    {
+        if(serialPort.IsOpen)
+        {
+            ClosePortEvent();
+        }
+        else
+        {
+            OnPortStatusChange();
+        }
+
+        
+    }
 
 
     void OnAutoConnectClicked()
@@ -105,8 +343,10 @@ public partial class CommsApp : SerialLoggingAppForm
                 }
             }
 
+            
             if (serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit))
             {
+                
             }
 
         }

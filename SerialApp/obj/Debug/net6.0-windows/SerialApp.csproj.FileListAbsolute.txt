@@ -1,8 +1,3 @@
-C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.csproj.AssemblyReference.cache
-C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.AssemblyInfoInputs.cache
-C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.AssemblyInfo.cs
-C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.csproj.CoreCompileInputs.cache
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\SerialApp.exe
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\SerialApp.deps.json
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\SerialApp.runtimeconfig.json
@@ -34,6 +29,11 @@ C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\runtimes\
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\runtimes\unix\lib\net6.0\System.IO.Ports.dll
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\bin\Debug\net6.0-windows\runtimes\win\lib\net6.0\System.IO.Ports.dll
+C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.csproj.AssemblyReference.cache
+C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.AssemblyInfoInputs.cache
+C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.AssemblyInfo.cs
+C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.csproj.CoreCompileInputs.cache
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.csproj.CopyComplete
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\SerialApp.dll
 C:\Users\trobbins\Desktop\SerialApp\SerialApp\obj\Debug\net6.0-windows\refint\SerialApp.dll

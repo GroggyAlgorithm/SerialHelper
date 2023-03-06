@@ -1,5 +1,8 @@
 using System.IO.Ports;
-
+using System.Text.RegularExpressions;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
 /// Partial class - Main class file
@@ -27,7 +30,7 @@ public partial class CommsApp : SerialLoggingAppForm
     int currentTxIndex = 0;
     bool overwriteRxData = false;
     bool reapeatTxData = false;
-    bool rxIncreaseOnNextLineOrFFCharOnly = false;
+    bool rxIncreaseOnChars = false;
     TextBox rxBufferTextBox = new TextBox();
     int rxBufferSize = 0;
     TextBox txBufferTextBox = new TextBox();
@@ -43,6 +46,8 @@ public partial class CommsApp : SerialLoggingAppForm
     Button statusButton = new Button();
     System.Windows.Forms.Timer txTimer = new System.Windows.Forms.Timer();
     SerialDataReceivedEventHandler ComReceiveHandler;
+
+    List<string> possibleIncreaseCharacters = new List<string>();
 
 
     ComboBox comComboBox = new ComboBox();
@@ -92,6 +97,12 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
+
+    /// <summary>
+    /// Class constructor
+    /// </summary>
+    /// <param name="panelAsReadOnly"></param>
+    /// <param name="showAdvancedData"></param>
     public CommsApp(bool panelAsReadOnly, bool showAdvancedData)
     {
         this.mainDisplay = new System.Windows.Forms.FlowLayoutPanel();
@@ -102,7 +113,7 @@ public partial class CommsApp : SerialLoggingAppForm
         this.Text = "Serial COMs";
         logger = new SQLiteCommLogger();
         serialPort = new PortChat();
-
+        
         this.infoOnly = panelAsReadOnly;
         this.showAdvancedParameters = showAdvancedData;
 
@@ -121,6 +132,11 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
+
+    /// <summary>
+    /// Inherited Class constructor, calls component config from inheritance
+    /// </summary>
+    /// <param name="inputDisabled"></param>
     public CommsApp(bool inputDisabled) : base()
     {
         if(inputDisabled)
@@ -230,7 +246,9 @@ public partial class CommsApp : SerialLoggingAppForm
 
 
 
-    
+    /// <summary>
+    /// Sets up gui components
+    /// </summary>
     protected override void ComponentConfig()
     {
 
@@ -243,7 +261,12 @@ public partial class CommsApp : SerialLoggingAppForm
 
         ComReceiveHandler = new SerialDataReceivedEventHandler((_, _) => ReadFromComm());
 
-        
+        possibleIncreaseCharacters = new List<string>();
+        possibleIncreaseCharacters.Add("\\n");
+        possibleIncreaseCharacters.Add("\\f");
+        possibleIncreaseCharacters.Add("\\r");
+        possibleIncreaseCharacters.Add(";");
+
 
         if(this.infoOnly)
         {
@@ -276,6 +299,11 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
+
+    /// <summary>
+    /// Sets up gui components
+    /// </summary>
+    /// <param name="showAdvancedData"></param>
     protected void ComponentConfig(bool showAdvancedData)
     {
 
@@ -287,6 +315,13 @@ public partial class CommsApp : SerialLoggingAppForm
         this.mainDisplay.AutoSize = true;
 
         ComReceiveHandler = new SerialDataReceivedEventHandler((_, _) => ReadFromComm());
+
+        possibleIncreaseCharacters = new List<string>();
+        possibleIncreaseCharacters.Add("\\n");
+        possibleIncreaseCharacters.Add("\\f");
+        possibleIncreaseCharacters.Add("\\r");
+        possibleIncreaseCharacters.Add(";");
+
 
         this.showAdvancedParameters = showAdvancedData;
         SerialOptionsPanelConfig(showAdvancedData);
@@ -313,40 +348,10 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
-    void ClosePortEvent()
-    {
-        rxEnabled = false;
-        txEnabled = false;
-        currentRxIndex = 0;
-        currentTxIndex = 0;
-
-        rxEnableBox.Checked = false;
-        txEnableBox.Checked = false;
-        OnPortStatusChange();
-        
-    }
-
-
-    void VoidKeypressHandler(object? o, KeyPressEventArgs e)
-    {
-        e.Handled = true;
-    }
-
-    void StatusButtonClick()
-    {
-        if(serialPort.IsOpen)
-        {
-            ClosePortEvent();
-        }
-        else
-        {
-            OnPortStatusChange();
-        }
-
-        
-    }
-
-
+   
+    /// <summary>
+    /// Sets up the status info section of gui
+    /// </summary>
     void SetStatusInfo()
     {
         if (serialPort.IsOpen)
@@ -363,14 +368,12 @@ public partial class CommsApp : SerialLoggingAppForm
         }
     }
 
-    void TxRxClickNoAuto()
-    {
-        if(serialPort.IsOpen)
-        {
-            OnPortStatusChange();
-        }
-    }
+    
 
+    /// <summary>
+    /// Creates the full status section
+    /// </summary>
+    /// <param name="comInfoPanel"></param>
     void CreateStatusSection(ref Panel comInfoPanel)
     {
         var statusLabel = new Label();
@@ -395,6 +398,12 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
+
+    /// <summary>
+    /// Creates the data sections of the gui
+    /// </summary>
+    /// <param name="rxBufferSelectionPanel"></param>
+    /// <param name="txBufferSelectionPanel"></param>
     void CreateAllDataSections(ref Panel rxBufferSelectionPanel, ref Panel txBufferSelectionPanel)
     {
         rxBufferSize = 0;
@@ -407,10 +416,24 @@ public partial class CommsApp : SerialLoggingAppForm
         rxEnableBox.AutoCheck = false;
         rxEnableBox.Appearance = Appearance.Normal;
         rxEnableBox.Click += RxSetup;
+
+        var rxEnableAllMenuItem = new CheckBox();
+        rxEnableAllMenuItem.Text = "\u2713-Enable Rx and Tx";
+        rxEnableAllMenuItem.AutoSize = true;
+        rxEnableAllMenuItem.AutoCheck = false;
+        rxEnableAllMenuItem.Appearance = Appearance.Button;
+        rxEnableAllMenuItem.BackColor = txBufferSelectionPanel.BackColor;
+        rxEnableAllMenuItem.Location = new Point(rxEnableBox.Right - rxEnableAllMenuItem.Width/2,rxEnableBox.Bottom+5);
+        rxEnableAllMenuItem.Click += new EventHandler((_,_) => OnEnableAll());
+
+        
         
         if(autoConnect)
         {
             rxEnableBox.Click += new EventHandler((_,_)=>OnPortStatusChange());
+            rxEnableAllMenuItem.Click += new EventHandler((_,_) => OnPortStatusChange());
+
+            
         }
         else
         {
@@ -435,6 +458,7 @@ public partial class CommsApp : SerialLoggingAppForm
         rxBufferSelectionPanel.Controls.Add(rxBufferLabel);
         rxBufferSelectionPanel.Controls.Add(rxBufferTextBox);
         rxBufferSelectionPanel.Controls.Add(rxRepeatBox);
+        rxBufferSelectionPanel.Controls.Add(rxEnableAllMenuItem);
 
         CreateBufferSizeSettings("Tx Buffer Size",out var txBufferLabel, out txBufferTextBox, new Point(10,15), new Padding(5,5,0,5));
         txBufferTextBox.Text = "0";
@@ -475,14 +499,26 @@ public partial class CommsApp : SerialLoggingAppForm
         txEnableBox.AutoCheck = false;
         txEnableBox.Appearance = Appearance.Normal;
         txEnableBox.Click += TxSetup;
+
+        var txEnableAllMenuItem = new CheckBox();
+        txEnableAllMenuItem.Text = "\u2713-Enable Rx and Tx";
+        txEnableAllMenuItem.AutoSize = true;
+        txEnableAllMenuItem.AutoCheck = false;
+        txEnableAllMenuItem.Appearance = Appearance.Button;
+        txEnableAllMenuItem.BackColor = rxBufferSelectionPanel.BackColor;
+        txEnableAllMenuItem.Location = new Point(txEnableBox.Right - txEnableAllMenuItem.Width/2,txEnableBox.Bottom+5);
+        txEnableAllMenuItem.Click += new EventHandler((_,_) => OnEnableAll());
+            
+
         if(autoConnect)
         {
             txEnableBox.Click += new EventHandler((_,_)=>OnPortStatusChange());
+            txEnableAllMenuItem.Click += new EventHandler((_,_) => OnPortStatusChange());
         }
         else
         {
             
-            rxEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
+            txEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
         }
         txRepeatBox = new CheckBox();
         txRepeatBox.Location = new Point(txEnableBox.Right,delayMsLabel.Bottom+5);
@@ -502,9 +538,18 @@ public partial class CommsApp : SerialLoggingAppForm
         txBufferSelectionPanel.Controls.Add(txBufferLabel);
         txBufferSelectionPanel.Controls.Add(txBufferTextBox);
         txBufferSelectionPanel.Controls.Add(txRepeatBox);
+        txBufferSelectionPanel.Controls.Add(txEnableAllMenuItem);
     }
 
 
+
+    /// <summary>
+    /// Creates the settings section
+    /// </summary>
+    /// <param name="comInfoPanel"></param>
+    /// <param name="comMenuItem"></param>
+    /// <param name="advancedMenuItem"></param>
+    /// <param name="showAdvancedData"></param>
     void CreateAllSettingsSections(ref Panel comInfoPanel, ref ToolStripMenuItem comMenuItem, ref ToolStripMenuItem advancedMenuItem, bool showAdvancedData)
     {
         var serialPortSelection = CreatePortSetting("COM",out var clabel,new Point(10,15),new Padding(5,5,0,5),port,out comComboBox, PortChat.AvailablePorts,comInfoPanel);
@@ -591,6 +636,12 @@ public partial class CommsApp : SerialLoggingAppForm
 
 
     
+    /// <summary>
+    /// Creates the settings section
+    /// </summary>
+    /// <param name="comInfoPanel"></param>
+    /// <param name="comMenuItem"></param>
+    /// <param name="advancedMenuItem"></param>
     void CreateAllSettingsSections(ref Panel comInfoPanel, ref ToolStripMenuItem comMenuItem, ref ToolStripMenuItem advancedMenuItem)
     {
         infoOnly = true;
@@ -704,45 +755,12 @@ public partial class CommsApp : SerialLoggingAppForm
         
     }
 
-    void OnEnableAll()
-    {
-        
-        if(rxBufferSize <= 0)
-        {
-            rxBufferSize = 3;
-            rxBufferTextBox.Text = "3";
-            SetRxDataBoxes();
-        }
-
-        if(txBufferSize <= 0)
-        {
-            txBufferSize = 3;
-            txBufferTextBox.Text = "3";
-            SetTxDataBoxes();
-        }
-
-        rxEnabled = true;
-        rxEnableBox.Checked = true;
-
-        txEnabled = true;
-        txEnableBox.Checked = true;
-        
-    }
-
-
-    void OnEnableRepeats()
-    {
-        overwriteRxData = true;
-        reapeatTxData = true;
-        txRepeatBox.Checked = true;
-        rxRepeatBox.Checked = true;
-    }
-
-    void ToggleNewLine()
-    {
-        this.rxIncreaseOnNextLineOrFFCharOnly = !this.rxIncreaseOnNextLineOrFFCharOnly;
-    }
     
+    
+    /// <summary>
+    /// Sets up the options panel
+    /// </summary>
+    /// <param name="showAdvancedData"></param>
     void SerialOptionsPanelConfig(bool showAdvancedData)
     {
         setupControlsToLabel = new Dictionary<ToolStripMenuItem, Label>();
@@ -867,24 +885,51 @@ public partial class CommsApp : SerialLoggingAppForm
         var enableRepeatAllMenuItem = new ToolStripMenuItem("Enable Rx Overwriting and Tx Repeating");
         enableRepeatAllMenuItem.Click += new EventHandler((_,_) => OnEnableRepeats());
 
-        var newLineMenuItem = new ToolStripMenuItem("Increase Rx Index On New Line or Form Feed Characters Only");
-        newLineMenuItem.CheckOnClick = true;
-        newLineMenuItem.Checked = this.rxIncreaseOnNextLineOrFFCharOnly;
-        newLineMenuItem.Click += new EventHandler((_,_) => ToggleNewLine());
-        newLineMenuItem.Click += new EventHandler((_,_) => newLineMenuItem.Checked = this.rxIncreaseOnNextLineOrFFCharOnly);
+        var rxIncreaseIndexSettingsMenuItem = new ToolStripMenuItem("Increase Rx Index On Set Characters Only");
+        rxIncreaseIndexSettingsMenuItem.CheckOnClick = true;
+        rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars;
+        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => ToggleRxIncreaseOnChar());
+        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars);
         
 
         var openPortItem = new ToolStripMenuItem("Open Port");
         openPortItem.Click += new EventHandler((_,_)=>OnPortStatusChange());
 
-        fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
-        fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
-        fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
+
+        var mainSettingsMenuItem = new ToolStripMenuItem("Settings");
+        mainSettingsMenuItem.DropDownItems.Add(autoConnectMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(panelInfoMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
+        
+        var mainAdvancedSettingsMenuItem = new ToolStripMenuItem("Advanced Settings");
+
+        var rxIncreaseIndexCharListMenuItem = new ToolStripMenuItem("Rx Index Possible Increase Values");
+        // rxIncreaseIndexCharListMenuItem.DropDownItems.AddRange(possibleIncreaseCharacters);
+        rxIncreaseIndexCharListMenuItem.AddDropdownRange(possibleIncreaseCharacters);
+        // rxIncreaseIndexCharListMenuItem.DropDownOpened += RxSetupIncreaseChars;
+
+
+        mainAdvancedSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexCharListMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(mainAdvancedSettingsMenuItem);
+
+        var clearRxItem = new ToolStripMenuItem("Clear Rx");
+        clearRxItem.Click += new EventHandler((_,_)=>ClearRxItemsClick());
+        
+        var clearTxItem = new ToolStripMenuItem("Clear Tx");
+        clearTxItem.Click += new EventHandler((_,_)=>ClearTxItemsClick());
+
+        // fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
+        // fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
+        // fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
         fileMenuItem.DropDownItems.Add(enableAllMenuItem);
         fileMenuItem.DropDownItems.Add(enableRepeatAllMenuItem);
-        fileMenuItem.DropDownItems.Add(newLineMenuItem);
+        fileMenuItem.DropDownItems.Add(clearRxItem);
+        fileMenuItem.DropDownItems.Add(clearTxItem);
+        // fileMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(openPortItem);
         fileMenuItem.DropDownItems.Add(closePortItem);
+        fileMenuItem.DropDownItems.Add(mainSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(exitMenuItem);
 
         CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem,showAdvancedData);
@@ -919,7 +964,10 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
     
-
+    
+    /// <summary>
+    /// Sets up the options panel
+    /// </summary>
     void SerialOptionsPanelConfig()
     {
         setupControlsToLabel = new Dictionary<ToolStripMenuItem, Label>();
@@ -1044,23 +1092,49 @@ public partial class CommsApp : SerialLoggingAppForm
         enableRepeatAllMenuItem.Click += new EventHandler((_,_) => OnEnableRepeats());
         
 
-        var newLineMenuItem = new ToolStripMenuItem("Increase Rx Index On New Line or Form Feed Characters Only");
-        newLineMenuItem.CheckOnClick = true;
-        newLineMenuItem.Checked = this.rxIncreaseOnNextLineOrFFCharOnly;
-        newLineMenuItem.Click += new EventHandler((_,_) => ToggleNewLine());
-        newLineMenuItem.Click += new EventHandler((_,_) => newLineMenuItem.Checked = this.rxIncreaseOnNextLineOrFFCharOnly);
+        var rxIncreaseIndexSettingsMenuItem = new ToolStripMenuItem("Increase Rx Index On Set Characters Only");
+        rxIncreaseIndexSettingsMenuItem.CheckOnClick = true;
+        rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars;
+        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => ToggleRxIncreaseOnChar());
+        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars);
         
         var openPortItem = new ToolStripMenuItem("Open Port");
         openPortItem.Click += new EventHandler((_,_)=>OnPortStatusChange());
 
-        fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
-        fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
-        fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
+        var mainSettingsMenuItem = new ToolStripMenuItem("Settings");
+        mainSettingsMenuItem.DropDownItems.Add(autoConnectMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(panelInfoMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
+
+        var mainAdvancedSettingsMenuItem = new ToolStripMenuItem("Advanced Settings");
+
+        var rxIncreaseIndexCharListMenuItem = new ToolStripMenuItem("Rx Index Possible Increase Values");
+        // rxIncreaseIndexCharListMenuItem.DropDownItems.AddRange(possibleIncreaseCharacters);
+        rxIncreaseIndexCharListMenuItem.AddDropdownRange(possibleIncreaseCharacters);
+        // rxIncreaseIndexCharListMenuItem.DropDownOpened += RxSetupIncreaseChars;
+
+
+        mainAdvancedSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexCharListMenuItem);
+        mainSettingsMenuItem.DropDownItems.Add(mainAdvancedSettingsMenuItem);
+        
+        var clearRxItem = new ToolStripMenuItem("Clear Rx");
+        clearRxItem.Click += new EventHandler((_,_)=>ClearRxItemsClick());
+        
+        var clearTxItem = new ToolStripMenuItem("Clear Tx");
+        clearTxItem.Click += new EventHandler((_,_)=>ClearTxItemsClick());
+
+        // fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
+        // fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
+        // fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
         fileMenuItem.DropDownItems.Add(enableAllMenuItem);
         fileMenuItem.DropDownItems.Add(enableRepeatAllMenuItem);
-        fileMenuItem.DropDownItems.Add(newLineMenuItem);
+        fileMenuItem.DropDownItems.Add(clearRxItem);
+        fileMenuItem.DropDownItems.Add(clearTxItem);
+        // fileMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(openPortItem);
         fileMenuItem.DropDownItems.Add(closePortItem);
+        fileMenuItem.DropDownItems.Add(mainSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(exitMenuItem);
 
         CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem);
@@ -1190,7 +1264,7 @@ public partial class CommsApp : SerialLoggingAppForm
         newComboBox.KeyPress += VoidKeypressHandler;
         newComboBox.Width = (newComboBox.Width - 13);
         newComboBox.Location = new Point(panel.Width - newComboBox.Width - 3, label.Location.Y-2);
-        newComboBox.Cursor = Cursors.AppStarting;
+        newComboBox.Cursor = Cursors.Arrow;
 
         foreach(var val in possibleValues)
         {
@@ -1364,9 +1438,9 @@ public partial class CommsApp : SerialLoggingAppForm
         {
             if(serialPort.AvailableBytes > 0 && rxData.Length > 0)
             {
-                var currentData = serialPort.ReadExisting();
+                var currentData = serialPort.ReadExisting(100);
                 
-                if (rxIncreaseOnNextLineOrFFCharOnly == true)
+                if (rxIncreaseOnChars == true)
                 {
                     if (currentRxIndex >= rxBufferSize)
                     {
@@ -1395,7 +1469,13 @@ public partial class CommsApp : SerialLoggingAppForm
                     
                     foreach (var c in currentData)
                     {
-                        if (c == '\n' || c == '\f')
+                        string checkVal = c.ToString();
+                        if(c < ' ')
+                        // if(char.IsControl(c))
+                        {
+                            checkVal = Regex.Unescape(c.ToString());
+                        }
+                        if (possibleIncreaseCharacters.Contains(checkVal) == true)
                         {
 
                             rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text = strOut));
@@ -1432,8 +1512,11 @@ public partial class CommsApp : SerialLoggingAppForm
                                 }
                             }
                         }
+                        else
+                        {
+                            strOut += c.ToString();
+                        }
 
-                        strOut += c.ToString();
                     }
 
                     // currentRxIndex++;
