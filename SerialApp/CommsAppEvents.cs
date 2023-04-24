@@ -14,6 +14,46 @@ public static class ToolStripExtensions
         }
     }
 
+    public static void HideItems(this ToolStripMenuItem item)
+    {
+
+        item.DropDown.Items.Hide();
+
+        for (var i = 0; i < item.DropDownItems.Count; i++)
+        {
+            item.DropDownItems[i].Visible = false;
+        }
+
+        
+    }
+
+    public static void Hide(this ToolStripItemCollection  item)
+    {
+        for (var i = 0; i < item.Count; i++)
+        {
+            item[i].Visible = false;
+        }
+    }
+
+
+    public static void ShowItems(this ToolStripMenuItem item)
+    {
+        item.DropDown.Items.Show();
+
+        for (var i = 0; i < item.DropDownItems.Count; i++)
+        {
+            item.DropDownItems[i].Visible = true;
+        }
+    }
+
+    public static void Show(this ToolStripItemCollection  item)
+    {
+        for (var i = 0; i < item.Count; i++)
+        {
+            item[i].Visible = true;
+        }
+    }
+
 
     
     public static void AddRange(this ToolStripItemCollection tsmic, ICollection collection)
@@ -205,6 +245,7 @@ public partial class CommsApp : SerialLoggingAppForm
 
     void TxRxClickNoAuto()
     {
+        
         if(serialPort.IsOpen)
         {
             OnPortStatusChange();
@@ -212,7 +253,7 @@ public partial class CommsApp : SerialLoggingAppForm
     }
 
 
-     void ClosePortEvent()
+    void ClosePortEvent()
     {
         rxEnabled = false;
         txEnabled = false;
@@ -221,6 +262,27 @@ public partial class CommsApp : SerialLoggingAppForm
 
         rxEnableBox.Checked = false;
         txEnableBox.Checked = false;
+        OnPortStatusChange();
+        
+    }
+
+
+    void ClosePortEvent(bool disableRx, bool disableTx)
+    {
+        if(disableRx)
+        {
+            rxEnabled = false;
+            currentRxIndex = 0;
+            rxEnableBox.Checked = false;
+
+        }
+
+        if(disableTx)
+        {
+            txEnabled = false;
+            currentTxIndex = 0;
+            txEnableBox.Checked = false;
+        }
         OnPortStatusChange();
         
     }
@@ -257,15 +319,15 @@ public partial class CommsApp : SerialLoggingAppForm
         this.mainDisplay.Size = this.ClientSize;
         this.mainDisplay.AutoSize = true;
         
-
-        if(this.infoOnly)
-        {
-            SerialOptionsPanelConfig();
-        }
-        else
-        {
-            SerialOptionsPanelConfig(this.showAdvancedParameters);
-        }
+        SerialOptionsPanelConfig();
+        // if(this.infoOnly)
+        // {
+        //     SerialOptionsPanelConfig();
+        // }
+        // else
+        // {
+        //     SerialOptionsPanelConfig(this.showAdvancedParameters);
+        // }
 
 
 
@@ -282,15 +344,15 @@ public partial class CommsApp : SerialLoggingAppForm
         this.mainDisplay.Size = this.ClientSize;
         this.mainDisplay.AutoSize = true;
         
-
-        if(this.infoOnly)
-        {
-            SerialOptionsPanelConfig();
-        }
-        else
-        {
-            SerialOptionsPanelConfig(this.showAdvancedParameters);
-        }
+        SerialOptionsPanelConfig();
+        // if(this.infoOnly)
+        // {
+        //     SerialOptionsPanelConfig();
+        // }
+        // else
+        // {
+        //     SerialOptionsPanelConfig(this.showAdvancedParameters);
+        // }
 
 
 
@@ -305,17 +367,13 @@ public partial class CommsApp : SerialLoggingAppForm
         this.mainDisplay = new System.Windows.Forms.FlowLayoutPanel();
         this.mainDisplay.Size = this.ClientSize;
         this.mainDisplay.AutoSize = true;
-        if(this.infoOnly)
-        {
-            SerialOptionsPanelConfig();
-        }
-        else
-        {
-            SerialOptionsPanelConfig(this.showAdvancedParameters);
-        }
-
-
+        
+        SerialOptionsPanelConfig();
     }
+
+
+
+
 
     void OnPortStatusChange()
     {
@@ -343,11 +401,11 @@ public partial class CommsApp : SerialLoggingAppForm
                 }
             }
 
-            
             if (serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit))
             {
-                
+
             }
+           
 
         }
         else
@@ -905,7 +963,6 @@ public partial class CommsApp : SerialLoggingAppForm
         
         foreach(var p in PortChat.AvailablePorts)
         {
-            bool foundItem = false;
             if(comComboBox.Items.Contains(p) == false)
             {
                 comComboBox.Items.Add(p);
@@ -977,9 +1034,55 @@ public partial class CommsApp : SerialLoggingAppForm
 
     void OnViewLogs()
     {
-        CommsApp tempForm = new CommsApp(true);
+        
+        CommsApp tempForm = new CommsApp(true,this.logger);
+        this.Hide();
+        this.ClosePortEvent();
         tempForm.Focus();
+        tempForm.FormClosed += new FormClosedEventHandler((_, _) => this.Show());
         tempForm.Show();
+    }
+
+
+
+    void OnViewLogs(bool selectDb)
+    {
+        
+        CommsApp tempForm = new CommsApp(true,this.logger,selectDb);
+        this.Hide();
+        this.ClosePortEvent();
+        tempForm.Focus();
+        tempForm.FormClosed += new FormClosedEventHandler((_, _) => this.Show());
+        tempForm.Show();
+    }
+
+
+    void OnLoggerDropdown(object? obj, EventArgs e)
+    {
+        if(this.logger == null)
+        {
+            // MessageBox.Show("Please select log folder path", "IO_LOG.db Path not set",MessageBoxButtons.OK,MessageBoxIcon.Information);
+            this.logger = new SQLiteCommLogger();
+        }
+    }
+
+
+    void OnNewLogger(object? obj, EventArgs e)
+    {
+        this.logger.CreateNewDatabase();
+        //MessageBox.Show("Please select log folder path", "IO_LOG.db",MessageBoxButtons.OK,MessageBoxIcon.Information);
+        //this.logger = new SQLiteCommLogger(" ");
+
+
+    }
+
+    void OnSelectLogger()
+    {
+        this.logger.SelectDatabase();
+        //MessageBox.Show("Please select log folder path", "IO_LOG.db",MessageBoxButtons.OK,MessageBoxIcon.Information);
+        //this.logger = new SQLiteCommLogger(" ");
+
+
     }
 
 

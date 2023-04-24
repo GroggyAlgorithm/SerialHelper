@@ -3,6 +3,10 @@ using System.Text.RegularExpressions;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+
+
+
 
 /// <summary>
 /// Partial class - Main class file
@@ -24,8 +28,10 @@ public partial class CommsApp : SerialLoggingAppForm
     string handshake = "None";
     string readTimeout = "500";
     string writeTimeout = "500";
+    bool txIncreaseOnRx = false;
     bool rxEnabled = false;
     bool txEnabled = false;
+    int savedRxIndex = 0;
     int currentRxIndex = 0;
     int currentTxIndex = 0;
     bool overwriteRxData = false;
@@ -71,6 +77,7 @@ public partial class CommsApp : SerialLoggingAppForm
         TxString,
         TxByte,
         TxAscii,
+        TxNumerical,
         Other
     };
 
@@ -79,7 +86,8 @@ public partial class CommsApp : SerialLoggingAppForm
     {
         [TransmissionModes.TxString] = "String",
         [TransmissionModes.TxByte] =   "Convert to Bytes",
-        [TransmissionModes.TxAscii] =  "Ascii Char"
+        [TransmissionModes.TxAscii] =  "Ascii Char",
+        [TransmissionModes.TxNumerical] =  "Numerical Values"
 
     };
 
@@ -98,46 +106,12 @@ public partial class CommsApp : SerialLoggingAppForm
 
 
 
-    /// <summary>
-    /// Class constructor
-    /// </summary>
-    /// <param name="panelAsReadOnly"></param>
-    /// <param name="showAdvancedData"></param>
-    public CommsApp(bool panelAsReadOnly, bool showAdvancedData)
-    {
-        this.mainDisplay = new System.Windows.Forms.FlowLayoutPanel();
-        this.mainDisplay.Size = this.ClientSize;
-        this.mainDisplay.AutoSize = true;
-        this.ClientSize = new System.Drawing.Size(725, 348);
-        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-        this.Text = "Serial COMs";
-        logger = new SQLiteCommLogger();
-        serialPort = new PortChat();
-        
-        this.infoOnly = panelAsReadOnly;
-        this.showAdvancedParameters = showAdvancedData;
-
-        if(panelAsReadOnly)
-        {
-            ComponentConfig();
-        }
-        else
-        {
-            ComponentConfig(showAdvancedData);
-        }
-        
-        
-
-    
-    }
-
-
 
     /// <summary>
     /// Inherited Class constructor, calls component config from inheritance
     /// </summary>
     /// <param name="inputDisabled"></param>
-    public CommsApp(bool inputDisabled) : base()
+    public CommsApp(bool inputDisabled, SQLiteCommLogger logger, bool selectDatabase = false) : base(logger)
     {
         if(inputDisabled)
         {
@@ -154,8 +128,18 @@ public partial class CommsApp : SerialLoggingAppForm
             
             menuStrip.Enabled = false;
 
-            var rxDbData = logger.RxData;
-            var txDbData = logger.TxData;
+            List<string> rxDbData = new List<string>();
+            List<string> txDbData = new List<string>();
+
+            if(selectDatabase)
+            {
+                logger.ReadDatabase(out rxDbData, out txDbData);
+            }
+            else
+            {
+                rxDbData = logger.RxData;
+                txDbData = logger.TxData;
+            }
 
             rxBufferTextBox.Text = (rxDbData.Count+1).ToString();
             rxBufferTextBox.ReadOnly = true;
@@ -267,15 +251,7 @@ public partial class CommsApp : SerialLoggingAppForm
         possibleIncreaseCharacters.Add("\\r");
         possibleIncreaseCharacters.Add(";");
 
-
-        if(this.infoOnly)
-        {
-            SerialOptionsPanelConfig();
-        }
-        else
-        {
-            SerialOptionsPanelConfig(this.showAdvancedParameters);
-        }
+        SerialOptionsPanelConfig();
         
         serialPort = new PortChat();
         
@@ -296,6 +272,8 @@ public partial class CommsApp : SerialLoggingAppForm
         SetPortSetting("Data Bits", dataBit);
         SetPortSetting("Read Timeout", readTimeout);
         SetPortSetting("Write Timeout", writeTimeout);
+
+        logger = new SQLiteCommLogger();
     }
 
 
@@ -315,7 +293,7 @@ public partial class CommsApp : SerialLoggingAppForm
         this.mainDisplay.AutoSize = true;
 
         ComReceiveHandler = new SerialDataReceivedEventHandler((_, _) => ReadFromComm());
-
+        
         possibleIncreaseCharacters = new List<string>();
         possibleIncreaseCharacters.Add("\\n");
         possibleIncreaseCharacters.Add("\\f");
@@ -324,7 +302,7 @@ public partial class CommsApp : SerialLoggingAppForm
 
 
         this.showAdvancedParameters = showAdvancedData;
-        SerialOptionsPanelConfig(showAdvancedData);
+        SerialOptionsPanelConfig();
 
         serialPort = new PortChat();
         
@@ -345,6 +323,8 @@ public partial class CommsApp : SerialLoggingAppForm
         SetPortSetting("Data Bits", dataBit);
         SetPortSetting("Read Timeout", readTimeout);
         SetPortSetting("Write Timeout", writeTimeout);
+
+        logger = new SQLiteCommLogger();
     }
 
 
@@ -357,13 +337,13 @@ public partial class CommsApp : SerialLoggingAppForm
         if (serialPort.IsOpen)
         {
             statusButton.BackColor = Color.SpringGreen;
-            statusButton.Text = "Connected";
+            statusButton.Text = "Connected \u2713 ";
             this.Text = string.Format("Serial COMs: Port: {0}, Baud: {1}, Parity: {2}, Stop Bit: {3}, Data Bits: {4}, Handshake {5} - {6}", port, baud, parity, stopBit, dataBit, handshake, "Open");
         }
         else
         {
             statusButton.BackColor = Color.DarkRed;
-            statusButton.Text = "Closed";
+            statusButton.Text = "Closed \u2B59";
             this.Text = string.Format("Serial COMs: Port: {0}, Baud: {1}, Parity: {2}, Stop Bit: {3}, Data Bits: {4}, Handshake {5} - {6}", port, baud, parity, stopBit, dataBit, handshake, "Closed");
         }
     }
@@ -380,14 +360,15 @@ public partial class CommsApp : SerialLoggingAppForm
         statusLabel.Text = "Status:";
         statusLabel.Margin = new Padding(5,5,0,5);
         statusLabel.AutoSize = true;
-        statusLabel.Location = new Point(10,255);
+        statusLabel.Location = new Point(10,260);
         statusLabel.BorderStyle = BorderStyle.None;
         statusLabel.ForeColor = Color.Black;
         statusLabel.Font = new Font("Arial", 10, FontStyle.Regular);
         comInfoPanel.Controls.Add(statusLabel);
 
         statusButton = new Button();
-        statusButton.Text = "Closed";
+        statusButton.Text = "Closed \u2B59";
+        statusButton.AutoSize = true;
         statusButton.Width = comComboBox.Width;
         statusButton.Location = new Point(comInfoPanel.Width - statusButton.Width - 3, statusLabel.Location.Y-2);
         
@@ -438,7 +419,7 @@ public partial class CommsApp : SerialLoggingAppForm
         else
         {
             
-            rxEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
+            // rxEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
         }
 
         CreateBufferSizeSettings("Rx Buffer Size",out var rxBufferLabel, out rxBufferTextBox, new Point(10,15), new Padding(5,5,0,5));
@@ -499,6 +480,7 @@ public partial class CommsApp : SerialLoggingAppForm
         txEnableBox.AutoCheck = false;
         txEnableBox.Appearance = Appearance.Normal;
         txEnableBox.Click += TxSetup;
+        
 
         var txEnableAllMenuItem = new CheckBox();
         txEnableAllMenuItem.Text = "\u2713-Enable Rx and Tx";
@@ -510,6 +492,7 @@ public partial class CommsApp : SerialLoggingAppForm
         txEnableAllMenuItem.Click += new EventHandler((_,_) => OnEnableAll());
             
 
+        
         if(autoConnect)
         {
             txEnableBox.Click += new EventHandler((_,_)=>OnPortStatusChange());
@@ -518,8 +501,9 @@ public partial class CommsApp : SerialLoggingAppForm
         else
         {
             
-            txEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
+            // txEnableBox.Click += new EventHandler((_, _) => TxRxClickNoAuto() );
         }
+
         txRepeatBox = new CheckBox();
         txRepeatBox.Location = new Point(txEnableBox.Right,delayMsLabel.Bottom+5);
         txRepeatBox.Text = "\u21BB-Tx Repeat";
@@ -755,19 +739,16 @@ public partial class CommsApp : SerialLoggingAppForm
         
     }
 
-    
-    
+
+
     /// <summary>
-    /// Sets up the options panel
+    /// Sets up the options panels
     /// </summary>
-    /// <param name="showAdvancedData"></param>
-    void SerialOptionsPanelConfig(bool showAdvancedData)
+    void SerialOptionsPanelConfig()
     {
         setupControlsToLabel = new Dictionary<ToolStripMenuItem, Label>();
-
         menuStrip = new MenuStrip();
         menuStrip.Parent = this;
-
         this.mainDisplay.BorderStyle = BorderStyle.FixedSingle;
 
         Panel comInfoPanel = new Panel();
@@ -776,8 +757,7 @@ public partial class CommsApp : SerialLoggingAppForm
         comInfoPanel.BackColor = Color.CadetBlue;
         comInfoPanel.Location = new Point(1,menuStrip.Bottom);
         comInfoPanel.Parent = this;
-        
-        
+
         Panel rxBufferSelectionPanel = new Panel();
         rxBufferSelectionPanel.Size = new Size(250,150);
         rxBufferSelectionPanel.BackColor = Color.Cornsilk;
@@ -791,10 +771,9 @@ public partial class CommsApp : SerialLoggingAppForm
         rxBoxPanel.Location = new Point(rxBufferSelectionPanel.Right,menuStrip.Bottom);
         rxBoxPanel.BorderStyle = BorderStyle.FixedSingle;
         rxBoxPanel.AutoScroll = true;
-        
+
         rxBoxPanel.VerticalScroll.Enabled = true;
         rxBoxPanel.Parent = this;
-
 
         Panel txBufferSelectionPanel = new Panel();
         txBufferSelectionPanel.Size = new Size(250,150);
@@ -813,21 +792,20 @@ public partial class CommsApp : SerialLoggingAppForm
         txBoxPanel.VerticalScroll.Enabled = true;
         txBoxPanel.Parent = this;
 
-        
-
         rxData = new TextBox[0];
         txData = new TextBox[0];
 
         var fileMenuItem = new ToolStripMenuItem("File");
+        
         var closePortItem = new ToolStripMenuItem("Close Port");
-
         closePortItem.Click += new EventHandler((_,_)=>ClosePortEvent());
-        fileMenuItem.DropDownItems.Add(closePortItem);
-
+        
         var comMenuItem = new ToolStripMenuItem("COM");
         comMenuItem.DropDownOpened += ReloadPorts;
 
         var txOptionsMenuItem = new ToolStripMenuItem("TX Options");
+
+        var txFormattingOptions = new ToolStripMenuItem("TX Formating");
 
         foreach(var key in txModeToString)
         {
@@ -836,32 +814,84 @@ public partial class CommsApp : SerialLoggingAppForm
             txMode.CheckOnClick = false;
             txMode.Click += OnTxModeClick;
             txMode.BackColor = Color.White;
-            txOptionsMenuItem.DropDownItems.Add(txMode);
-            
+            txFormattingOptions.DropDownItems.Add(txMode);
+        }
+        
+        txOptionsMenuItem.DropDownItems.Add(txFormattingOptions);
+
+        var txIncreasesOnRxOnly = new ToolStripMenuItem("TX Only Sends on RX");
+
+        var txIncreaseOnRxEnabled = new ToolStripMenuItem("Enabled");
+        txIncreaseOnRxEnabled.CheckOnClick = true;
+        txIncreaseOnRxEnabled.Checked = this.txIncreaseOnRx;
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => this.txIncreaseOnRx = !this.txIncreaseOnRx);
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => this.delayMsTb.Text = (this.txIncreaseOnRx) ? "100" : "1000");
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => SetTxDelay());
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => overwriteRxData = (this.txIncreaseOnRx) ? true : overwriteRxData);
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => rxRepeatBox.Checked = (this.txIncreaseOnRx) ? true : rxRepeatBox.Checked);
+
+        void onIncrease()
+        {
+            if (this.txIncreaseOnRx)
+            {
+                this.savedRxIndex = -1;
+                OnEnableAll();
+            }
         }
 
+        txIncreaseOnRxEnabled.Click += new EventHandler((_,_) => onIncrease() );
+
+        var txIncreaseOnRxSetRxFirst = new ToolStripMenuItem("Send");
+        txIncreaseOnRxSetRxFirst.Click += new EventHandler((_,_) => this.savedRxIndex = -1);
         
         
+        txIncreasesOnRxOnly.DropDownItems.Add(txIncreaseOnRxEnabled);
+        txIncreasesOnRxOnly.DropDownItems.Add(txIncreaseOnRxSetRxFirst);
+        txOptionsMenuItem.DropDownItems.Add(txIncreasesOnRxOnly);
 
         var loggingMenu = new ToolStripMenuItem("Logging");
-        var viewLogsMenuItem = new ToolStripMenuItem("View Logs");
-        var exportLogsMenuItem = new ToolStripMenuItem("Save Logs To Text File");
-        var enableLoggingMenuItem = new ToolStripMenuItem("Enable Logging");
-        var deleteLoggingMenuItem = new ToolStripMenuItem("Delete Logs");
 
+        var viewLogsMenuParentItem = new ToolStripMenuItem("View");
+        var saveLogsMenuParentItem = new ToolStripMenuItem("Save");
+        var viewLogsMenuItem = new ToolStripMenuItem("View Curret Log");
+        var viewNewLogsMenuItem = new ToolStripMenuItem("View Log");
+        var selectLogsMenuItem = new ToolStripMenuItem("Select Current Log");
+        viewLogsMenuParentItem.DropDownItems.Add(selectLogsMenuItem);
+        viewLogsMenuParentItem.DropDownItems.Add(viewLogsMenuItem);
+        viewLogsMenuParentItem.DropDownItems.Add(viewNewLogsMenuItem);
+        
+        var saveTextLogsMenuItem = new ToolStripMenuItem("Save Log To Text File");
+        var exportLogsMenuItem = new ToolStripMenuItem("Export Log");
+        var enableLoggingMenuItem = new ToolStripMenuItem("Enable Logging");
+        var deleteLoggingMenuItem = new ToolStripMenuItem("Delete Current Log");
+        var newLoggerItem = new ToolStripMenuItem("Create New Log");
+
+        selectLogsMenuItem.Click += new EventHandler((_,_) => OnSelectLogger());
         viewLogsMenuItem.Click += new EventHandler((_,_) => OnViewLogs());
+        viewNewLogsMenuItem.Click += new EventHandler((_,_) => OnViewLogs(true));
         enableLoggingMenuItem.CheckOnClick = true;
-        exportLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDbData());
+        saveTextLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDbData());
+        exportLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDatabase());
         enableLoggingMenuItem.Click += OnLoggingChanged;
         deleteLoggingMenuItem.Click += new EventHandler((_,_) => OnLoggingDelete());
 
+        loggingMenu.DropDownOpening += OnLoggerDropdown;
+        newLoggerItem.Click += OnNewLogger;
+
+        
+
         loggingMenu.DropDownItems.Add(enableLoggingMenuItem);
-        loggingMenu.DropDownItems.Add(viewLogsMenuItem);
-        loggingMenu.DropDownItems.Add(exportLogsMenuItem);
+        loggingMenu.DropDownItems.Add(newLoggerItem);
+        loggingMenu.DropDownItems.Add(viewLogsMenuParentItem);
+        
+        saveLogsMenuParentItem.DropDownItems.Add(saveTextLogsMenuItem);
+        saveLogsMenuParentItem.DropDownItems.Add(exportLogsMenuItem);
+        loggingMenu.DropDownItems.Add(saveLogsMenuParentItem);
+
         loggingMenu.DropDownItems.Add(deleteLoggingMenuItem);
 
         var settingsMenuItem = new ToolStripMenuItem("Settings");
-        var exitMenuItem = new ToolStripMenuItem("Exit", null, (_, _) => OnClose());
+        var exitMenuItem = new ToolStripMenuItem("&Exit", null, (_, _) => OnClose());
         var advancedMenuItem = new ToolStripMenuItem("Advanced");
         
         exitMenuItem.ShortcutKeys = Keys.Control | Keys.X;
@@ -871,6 +901,9 @@ public partial class CommsApp : SerialLoggingAppForm
         showAdvancedParametersMenuItem.Checked = this.showAdvancedParameters;
         showAdvancedParametersMenuItem.Click += new EventHandler((_,_) => OnAdvancedParametersClicked());
 
+        
+
+        
         var panelInfoMenuItem = new ToolStripMenuItem("Port Panel Read Only");
         panelInfoMenuItem.CheckOnClick = true;
         panelInfoMenuItem.Checked = this.infoOnly;
@@ -899,21 +932,18 @@ public partial class CommsApp : SerialLoggingAppForm
         var openPortItem = new ToolStripMenuItem("Open Port");
         openPortItem.Click += new EventHandler((_,_)=>OnPortStatusChange());
 
-
         var mainSettingsMenuItem = new ToolStripMenuItem("Settings");
         mainSettingsMenuItem.DropDownItems.Add(autoConnectMenuItem);
         mainSettingsMenuItem.DropDownItems.Add(panelInfoMenuItem);
         mainSettingsMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
         mainSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
         
+        
         var mainAdvancedSettingsMenuItem = new ToolStripMenuItem("Advanced Settings");
 
         var rxIncreaseIndexCharListMenuItem = new ToolStripMenuItem("Rx Index Possible Increase Values");
-        // rxIncreaseIndexCharListMenuItem.DropDownItems.AddRange(possibleIncreaseCharacters);
         rxIncreaseIndexCharListMenuItem.AddDropdownRange(possibleIncreaseCharacters);
-        // rxIncreaseIndexCharListMenuItem.DropDownOpened += RxSetupIncreaseChars;
-
-
+        
         mainAdvancedSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexCharListMenuItem);
         mainSettingsMenuItem.DropDownItems.Add(mainAdvancedSettingsMenuItem);
 
@@ -923,233 +953,27 @@ public partial class CommsApp : SerialLoggingAppForm
         var clearTxItem = new ToolStripMenuItem("Clear Tx");
         clearTxItem.Click += new EventHandler((_,_)=>ClearTxItemsClick());
 
-        // fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
-        // fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
-        // fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
+        // fileMenuItem.DropDownItems.Add(closePortItem);
         fileMenuItem.DropDownItems.Add(enableAllMenuItem);
         fileMenuItem.DropDownItems.Add(enableRepeatAllMenuItem);
         fileMenuItem.DropDownItems.Add(clearRxItem);
         fileMenuItem.DropDownItems.Add(clearTxItem);
-        // fileMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(openPortItem);
         fileMenuItem.DropDownItems.Add(closePortItem);
         fileMenuItem.DropDownItems.Add(mainSettingsMenuItem);
         fileMenuItem.DropDownItems.Add(exitMenuItem);
-
-        CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem,showAdvancedData);
-        CreateAllDataSections(ref rxBufferSelectionPanel, ref txBufferSelectionPanel);
-
-        comMenuItem.DropDownItems.Add(advancedMenuItem);
         
-
-        menuStrip.Items.Add(fileMenuItem);
-        menuStrip.Items.Add(comMenuItem);
-        menuStrip.Items.Add(loggingMenu);
-        menuStrip.Items.Add(txOptionsMenuItem);
-
-        System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-        timer.Interval = 1000; // Update time every 1 second
-        timer.Tick += new EventHandler(TimerTick);
-        timer.Tick += new EventHandler((_,_) => SetStatusInfo());
-        timer.Start();
-
-        this.clock = CreateTextBox(1, comInfoPanel.Bottom,"",150,150,Color.LightBlue);
-        this.clock.TextAlign = HorizontalAlignment.Center;
-        this.clock.ReadOnly = true;
-        this.clock.Cursor = Cursors.Arrow;
-        this.Controls.Add(this.clock);
-
-        
-
-        var spacer = CreateTextBox(this.clock.Right,comInfoPanel.Bottom,"",comInfoPanel.Width + rxBoxPanel.Width + rxBufferSelectionPanel.Width - this.clock.Width,this.clock.Height,Color.LightBlue);
-        spacer.ReadOnly = true;
-        spacer.Cursor = Cursors.Arrow;
-        this.Controls.Add(spacer);
-    }
-
-    
-    
-    /// <summary>
-    /// Sets up the options panel
-    /// </summary>
-    void SerialOptionsPanelConfig()
-    {
-        setupControlsToLabel = new Dictionary<ToolStripMenuItem, Label>();
-        infoOnly = true;
-
-        menuStrip = new MenuStrip();
-        menuStrip.Parent = this;
-
-        this.mainDisplay.BorderStyle = BorderStyle.FixedSingle;
-
-        Panel comInfoPanel = new Panel();
-        comInfoPanel.Size = new Size(223,300);
-        comInfoPanel.BorderStyle = BorderStyle.FixedSingle;
-        comInfoPanel.BackColor = Color.CadetBlue;
-        comInfoPanel.Location = new Point(1,menuStrip.Bottom);
-        comInfoPanel.Parent = this;
-        
-        
-        Panel rxBufferSelectionPanel = new Panel();
-        rxBufferSelectionPanel.Size = new Size(250,150);
-        rxBufferSelectionPanel.BackColor = Color.Cornsilk;
-        rxBufferSelectionPanel.Location = new Point(comInfoPanel.Right,menuStrip.Bottom);
-        rxBufferSelectionPanel.Parent = this;
-        rxBufferSelectionPanel.BorderStyle = BorderStyle.FixedSingle;
-
-        rxBoxPanel = new Panel();
-        rxBoxPanel.Size = new Size(250,150);
-        rxBoxPanel.BackColor = Color.Honeydew;
-        rxBoxPanel.Location = new Point(rxBufferSelectionPanel.Right,menuStrip.Bottom);
-        rxBoxPanel.BorderStyle = BorderStyle.FixedSingle;
-        rxBoxPanel.AutoScroll = true;
-        
-        rxBoxPanel.VerticalScroll.Enabled = true;
-        rxBoxPanel.Parent = this;
-
-
-        Panel txBufferSelectionPanel = new Panel();
-        txBufferSelectionPanel.Size = new Size(250,150);
-        txBufferSelectionPanel.BackColor = Color.AliceBlue;
-        txBufferSelectionPanel.Location = new Point(comInfoPanel.Right,rxBufferSelectionPanel.Bottom);
-        txBufferSelectionPanel.Parent = this;
-
-        txBufferSelectionPanel.BorderStyle = BorderStyle.FixedSingle;
-
-        txBoxPanel = new Panel();
-        txBoxPanel.Size = new Size(250,150);
-        txBoxPanel.BackColor = Color.Azure;
-        txBoxPanel.Location = new Point(txBufferSelectionPanel.Right,rxBoxPanel.Bottom);
-        txBoxPanel.AutoScroll = true;
-        txBoxPanel.BorderStyle = BorderStyle.FixedSingle;
-        txBoxPanel.VerticalScroll.Enabled = true;
-        txBoxPanel.Parent = this;
-
-        
-
-        rxData = new TextBox[0];
-        txData = new TextBox[0];
-
-        var fileMenuItem = new ToolStripMenuItem("File");
-        var closePortItem = new ToolStripMenuItem("Close Port");
-        closePortItem.Click += new EventHandler((_,_)=>ClosePortEvent());
-
-        
-        
-
-        var comMenuItem = new ToolStripMenuItem("COM");
-        comMenuItem.DropDownOpened += ReloadPorts;
-
-        var txOptionsMenuItem = new ToolStripMenuItem("TX Options");
-
-        foreach(var key in txModeToString)
+        if(this.infoOnly)
         {
-            ToolStripMenuItem txMode = new ToolStripMenuItem();
-            txMode.Text = key.Value;
-            txMode.CheckOnClick = false;
-            txMode.Click += OnTxModeClick;
-            txMode.BackColor = Color.White;
-            txOptionsMenuItem.DropDownItems.Add(txMode);
+            CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem);
         }
-
-        
-
-        var loggingMenu = new ToolStripMenuItem("Logging");
-        var viewLogsMenuItem = new ToolStripMenuItem("View Logs");
-        var exportLogsMenuItem = new ToolStripMenuItem("Save Logs To Text File");
-        var enableLoggingMenuItem = new ToolStripMenuItem("Enable Logging");
-        var deleteLoggingMenuItem = new ToolStripMenuItem("Delete Logs");
-
-        viewLogsMenuItem.Click += new EventHandler((_,_) => OnViewLogs());
-        enableLoggingMenuItem.CheckOnClick = true;
-        exportLogsMenuItem.Click += new EventHandler((_,_) => logger.ExportDbData());
-        enableLoggingMenuItem.Click += OnLoggingChanged;
-        deleteLoggingMenuItem.Click += new EventHandler((_,_) => OnLoggingDelete());
-
-        loggingMenu.DropDownItems.Add(enableLoggingMenuItem);
-        loggingMenu.DropDownItems.Add(viewLogsMenuItem);
-        loggingMenu.DropDownItems.Add(exportLogsMenuItem);
-        loggingMenu.DropDownItems.Add(deleteLoggingMenuItem);
-
-        var settingsMenuItem = new ToolStripMenuItem("Settings");
-        var exitMenuItem = new ToolStripMenuItem("&Exit", null, (_, _) => OnClose());
-        var advancedMenuItem = new ToolStripMenuItem("Advanced");
-        
-        exitMenuItem.ShortcutKeys = Keys.Control | Keys.X;
-
-        var showAdvancedParametersMenuItem = new ToolStripMenuItem("Show Advanced");
-        showAdvancedParametersMenuItem.CheckOnClick = true;
-        showAdvancedParametersMenuItem.Checked = this.showAdvancedParameters;
-        showAdvancedParametersMenuItem.Click += new EventHandler((_,_) => OnAdvancedParametersClicked());
-
-        var panelInfoMenuItem = new ToolStripMenuItem("Port Panel Read Only");
-        panelInfoMenuItem.CheckOnClick = true;
-        panelInfoMenuItem.Checked = this.infoOnly;
-        panelInfoMenuItem.Click += new EventHandler((_,_) => OnReadOnlyClicked());
-
-
-        var autoConnectMenuItem = new ToolStripMenuItem("Autoconnect On Parameters Set");
-        autoConnectMenuItem.CheckOnClick = true;
-        autoConnectMenuItem.Checked = this.autoConnect;
-        autoConnectMenuItem.Click += new EventHandler((_,_) => OnAutoConnectClicked());
-
-        var enableAllMenuItem = new ToolStripMenuItem("Enable Rx and Tx");
-        enableAllMenuItem.Click += new EventHandler((_,_) => OnEnableAll());
-
-        var enableRepeatAllMenuItem = new ToolStripMenuItem("Enable Rx Overwriting and Tx Repeating");
-        enableRepeatAllMenuItem.Click += new EventHandler((_,_) => OnEnableRepeats());
-        
-
-        var rxIncreaseIndexSettingsMenuItem = new ToolStripMenuItem("Increase Rx Index On Set Characters Only");
-        rxIncreaseIndexSettingsMenuItem.CheckOnClick = true;
-        rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars;
-        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => ToggleRxIncreaseOnChar());
-        rxIncreaseIndexSettingsMenuItem.Click += new EventHandler((_,_) => rxIncreaseIndexSettingsMenuItem.Checked = this.rxIncreaseOnChars);
-        
-        var openPortItem = new ToolStripMenuItem("Open Port");
-        openPortItem.Click += new EventHandler((_,_)=>OnPortStatusChange());
-
-        var mainSettingsMenuItem = new ToolStripMenuItem("Settings");
-        mainSettingsMenuItem.DropDownItems.Add(autoConnectMenuItem);
-        mainSettingsMenuItem.DropDownItems.Add(panelInfoMenuItem);
-        mainSettingsMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
-        mainSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
-
-        var mainAdvancedSettingsMenuItem = new ToolStripMenuItem("Advanced Settings");
-
-        var rxIncreaseIndexCharListMenuItem = new ToolStripMenuItem("Rx Index Possible Increase Values");
-        // rxIncreaseIndexCharListMenuItem.DropDownItems.AddRange(possibleIncreaseCharacters);
-        rxIncreaseIndexCharListMenuItem.AddDropdownRange(possibleIncreaseCharacters);
-        // rxIncreaseIndexCharListMenuItem.DropDownOpened += RxSetupIncreaseChars;
-
-
-        mainAdvancedSettingsMenuItem.DropDownItems.Add(rxIncreaseIndexCharListMenuItem);
-        mainSettingsMenuItem.DropDownItems.Add(mainAdvancedSettingsMenuItem);
-        
-        var clearRxItem = new ToolStripMenuItem("Clear Rx");
-        clearRxItem.Click += new EventHandler((_,_)=>ClearRxItemsClick());
-        
-        var clearTxItem = new ToolStripMenuItem("Clear Tx");
-        clearTxItem.Click += new EventHandler((_,_)=>ClearTxItemsClick());
-
-        // fileMenuItem.DropDownItems.Add(panelInfoMenuItem);
-        // fileMenuItem.DropDownItems.Add(showAdvancedParametersMenuItem);
-        // fileMenuItem.DropDownItems.Add(autoConnectMenuItem);
-        fileMenuItem.DropDownItems.Add(enableAllMenuItem);
-        fileMenuItem.DropDownItems.Add(enableRepeatAllMenuItem);
-        fileMenuItem.DropDownItems.Add(clearRxItem);
-        fileMenuItem.DropDownItems.Add(clearTxItem);
-        // fileMenuItem.DropDownItems.Add(rxIncreaseIndexSettingsMenuItem);
-        fileMenuItem.DropDownItems.Add(openPortItem);
-        fileMenuItem.DropDownItems.Add(closePortItem);
-        fileMenuItem.DropDownItems.Add(mainSettingsMenuItem);
-        fileMenuItem.DropDownItems.Add(exitMenuItem);
-
-        CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem);
+        else
+        {
+            CreateAllSettingsSections(ref comInfoPanel, ref comMenuItem, ref advancedMenuItem,this.showAdvancedParameters);
+        }
         CreateAllDataSections(ref rxBufferSelectionPanel, ref txBufferSelectionPanel);
 
         comMenuItem.DropDownItems.Add(advancedMenuItem);
-        
 
         menuStrip.Items.Add(fileMenuItem);
         menuStrip.Items.Add(comMenuItem);
@@ -1172,12 +996,10 @@ public partial class CommsApp : SerialLoggingAppForm
         spacer.ReadOnly = true;
         spacer.Cursor = Cursors.Arrow;
         this.Controls.Add(spacer);
-
+        
     }
 
-
     
-
 
     ToolStripMenuItem CreatePortSetting(string name, Point location, Padding margin, string connectedValue, ICollection<string> possibleValues, Panel panel)
     {
@@ -1247,6 +1069,7 @@ public partial class CommsApp : SerialLoggingAppForm
         selection.DropDownItemClicked += OnMenuItemSetupSelected;
         return selection;
     }
+
 
 
     ToolStripMenuItem CreatePortSetting(string name, out Label label, Point location, Padding margin, string connectedValue, out ComboBox comboBox, ICollection<string> possibleValues, Panel panel)
@@ -1334,42 +1157,81 @@ public partial class CommsApp : SerialLoggingAppForm
     
     protected override void WriteToComm()
     {
-        if(serialPort.IsOpen == true)
+
+
+        if(serialPort.IsOpen == true && txEnabled == true)
         {
-            if(txData.Length > 0)
+            bool canTx = true;
+
+            if( (rxEnabled == true && txIncreaseOnRx == true && currentRxIndex != savedRxIndex))
             {
-                string txtOut = "";
+                savedRxIndex = currentRxIndex;
+            }
+            else if(txIncreaseOnRx == true)
+            {
+                canTx = false;
+            }
 
-                if(currentTxIndex < txData.Length)
+            if(txData.Length > 0 && canTx)
+            {
+               
+                bool canSend = (currentTxIndex < txData.Length || reapeatTxData);
+
+                if(canSend)
                 {
-                    
-                    if (currentTxMode == TransmissionModes.TxByte)
-                    {
-                        foreach (var c in txData[currentTxIndex].Text)
-                        {
-                            txtOut += Convert.ToByte(c).ToString();
-                        }
+                    string txtOut = "";
 
-                    }
-                    else if(currentTxMode == TransmissionModes.TxAscii)
+                    if(reapeatTxData && currentTxIndex >= txData.Length)
                     {
-                        if(txData[currentTxIndex].Text.Length > 1)
-                        {
-                            txtOut += txData[currentTxIndex].Text[0];
-                            txData[currentTxIndex].Text = txtOut;
-                        }
-                        
-                        else
-                        {
+                        currentTxIndex = 0;
+                    }
+
+                    switch(currentTxMode)
+                    {
+                        case TransmissionModes.TxByte:
+                            foreach (var c in txData[currentTxIndex].Text)
+                            {
+                                txtOut += (Convert.ToByte(c)).ToString();
+                            }
+                        break;
+                        case TransmissionModes.TxAscii:
+                            if(txData[currentTxIndex].Text.Length > 1)
+                            {
+                                txtOut += txData[currentTxIndex].Text[0];
+                                txData[currentTxIndex].Text = txtOut;
+                            }
+                            else
+                            {
+                                txtOut = txData[currentTxIndex].Text;
+                            }
+                        break;
+
+                        case TransmissionModes.TxNumerical:
+                            if(int.TryParse(txData[currentTxIndex].Text, out var txInt))
+                            {
+                                txtOut = "";
+                                int shiftIndex = 24;
+                                while(txInt > 0 && shiftIndex > 0)
+                                {
+                                    txtOut += (char)((txInt & (0xff << shiftIndex)) >> shiftIndex);
+                                    txInt &= ~(0xff << shiftIndex);
+                                    shiftIndex -= 8;
+                                }
+                            }
+                            else
+                            {
+                                foreach (var c in txData[currentTxIndex].Text)
+                                {
+                                    txtOut += (byte)c;
+                                }
+                            }
+                        break;
+
+                        default:
                             txtOut = txData[currentTxIndex].Text;
-                        }
-                    }
-                    else
-                    {
-                        txtOut = txData[currentTxIndex].Text;
-                    }
-                    
-                    
+                        break;
+                    };
+
                     txData[currentTxIndex].BackColor = Color.SeaGreen;
 
                     if(currentTxIndex == 0)
@@ -1390,50 +1252,14 @@ public partial class CommsApp : SerialLoggingAppForm
 
                     currentTxIndex++;
                 }
-                else if(reapeatTxData)
-                {
-                    if (currentTxMode == TransmissionModes.TxByte)
-                    {
-                        foreach (var c in txData[0].Text)
-                        {
-                            txtOut += Convert.ToByte(c).ToString();
-                        }
 
-                    }
-                    else if(currentTxMode == TransmissionModes.TxAscii)
-                    {
-                        if(txData[0].Text.Length > 1)
-                        {
-                            txtOut += txData[0].Text[0];
-                            txData[0].Text = txtOut;
-                        }
-                        else
-                        {
-                            txtOut = txData[0].Text;
-                        }
-                    }
-                    else
-                    {
-                        txtOut = txData[0].Text;
-                    }
-                    
-
-
-                    txData[0].BackColor = Color.SeaGreen;
-
-                    txData.Last().BackColor = TextBox.DefaultBackColor;
-
-                    serialPort.WriteToPort(txtOut);
-
-                    if(loggingEnabled)
-                    {
-                        logger.WriteToTxData(txtOut);
-                    }
-                    currentTxIndex = 1;
-                }
-                
             }
+        
+        
         }
+
+
+
     }
 
 
@@ -1442,51 +1268,50 @@ public partial class CommsApp : SerialLoggingAppForm
     
     protected override void ReadFromComm()
     {
-        if(serialPort.IsOpen == true)
+        if(serialPort.IsOpen == true && rxEnabled == true)
         {
             if(serialPort.AvailableBytes > 0 && rxData.Length > 0)
             {
                 var currentData = serialPort.ReadExisting(100);
 
+                if (currentRxIndex >= rxBufferSize)
+                {
+                    currentRxIndex = 0;
+                    if (overwriteRxData == false)
+                    {
+                        rxEnableBox.Invoke((MethodInvoker)(() => rxEnableBox.Checked = false));
+                        rxEnabled = false;
+                        if (txEnabled == false)
+                        {
+                            serialPort.TryClosePort();
+                            ClosePortEvent();
+                        }
+                        return;
+                    }
+                }
+
+                if(string.IsNullOrEmpty(currentData))
+                {
+                    return;
+                }
                 if (rxIncreaseOnChars == true)
                 {
-                    if (currentRxIndex >= rxBufferSize)
+                    string strOut = "";
+
+                    foreach(var c in currentData)
                     {
-                        if (overwriteRxData)
+                        string checkVal = c.ToString();
+                        
+                        
+                        if (possibleIncreaseCharacters.Contains(checkVal) == false)
                         {
-                            currentRxIndex = 0;
+                            strOut += c;
                         }
                         else
                         {
-                            rxEnabled = false;
-                            serialPort.TryClosePort();
-
-                            if (txEnabled)
-                            {
-                                serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit);
-                            }
-                            else
-                            {
-                                ClosePortEvent();
-                            }
-
-                            return;
-                        }
-                    }
-                    string strOut = "";
-                    
-                    foreach (var c in currentData)
-                    {
-                        string checkVal = c.ToString();
-                        if(c < ' ')
-                        // if(char.IsControl(c))
-                        {
-                            checkVal = Regex.Unescape(c.ToString());
-                        }
-                        if (possibleIncreaseCharacters.Contains(checkVal) == true)
-                        {
-
-                            rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text = strOut));
+                            
+                            rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text += strOut));
+                            strOut = "";
 
                             if (loggingEnabled)
                             {
@@ -1494,131 +1319,47 @@ public partial class CommsApp : SerialLoggingAppForm
                             }
 
                             currentRxIndex++;
-                            strOut = "";
                             
                             if (currentRxIndex >= rxBufferSize)
                             {
-                                if (overwriteRxData)
-                                {
-                                    currentRxIndex = 0;
-                                }
-                                else
-                                {
-                                    rxEnabled = false;
-                                    serialPort.TryClosePort();
+                                currentRxIndex = 0;
 
-                                    if (txEnabled)
+                                if (overwriteRxData == false)
+                                {
+                                    rxEnableBox.Invoke((MethodInvoker)(() => rxEnableBox.Checked = false));
+                                    rxEnabled = false;
+                                    if (txEnabled == false)
                                     {
-                                        serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit);
-                                    }
-                                    else
-                                    {
+                                        serialPort.TryClosePort();
                                         ClosePortEvent();
                                     }
-
                                     return;
                                 }
                             }
                         }
-                        else
-                        {
-                            strOut += c.ToString();
-                        }
-
+                        
+                        
                     }
-
-                    // currentRxIndex++;
                     
-                    if(strOut != "")
+                    
+                    
+                    rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text += strOut));
+                    if (loggingEnabled)
                     {
-                        if (currentRxIndex >= rxBufferSize)
-                        {
-                            rxBufferSize += 1;
-                            rxBufferTextBox.Invoke((MethodInvoker)(() => rxBufferTextBox.Text = rxBufferSize.ToString())); 
-                            rxData.Last().Invoke((MethodInvoker)(SetRxDataBoxes));
-
-                            if (overwriteRxData)
-                            {
-                                currentRxIndex = 0;
-                            }
-                            else
-                            {
-                                rxEnabled = false;
-                                serialPort.TryClosePort();
-
-                                if (txEnabled)
-                                {
-                                    serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit);
-                                }
-                                else
-                                {
-                                    ClosePortEvent();
-                                }
-                            }
-                        }
-
-
-                        
-                        rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text += strOut));
-
-                        if (loggingEnabled)
-                        {
-                            logger.WriteToRxData(rxData[currentRxIndex].Text);
-                        }
-                        
+                        logger.WriteToRxData(rxData[currentRxIndex].Text);
                     }
-
                 }
                 else
                 {
-
-                    if(string.IsNullOrEmpty(currentData))
+                    rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text = currentData));
+                    if (loggingEnabled)
                     {
-                        return;
+                        logger.WriteToRxData(rxData[currentRxIndex].Text);
                     }
-
-
-                    if (currentRxIndex >= rxBufferSize)
-                    {
-
-                        if (overwriteRxData)
-                        {
-
-
-                            rxData[0].Invoke((MethodInvoker)(() => rxData[0].Text = currentData));
-                            if (loggingEnabled)
-                            {
-                                logger.WriteToRxData(rxData[0].Text);
-                            }
-
-                            currentRxIndex = 1;
-                        }
-                        else
-                        {
-                            rxEnabled = false;
-                            serialPort.TryClosePort();
-
-                            if (txEnabled)
-                            {
-                                serialPort.TryOpenPort(port, baud, parity, stopBit, handshake, readTimeout, writeTimeout, dataBit);
-                            }
-
-
-                        }
-                    }
-                    else
-                    {
-                        rxData[currentRxIndex].Invoke((MethodInvoker)(() => rxData[currentRxIndex].Text = currentData));
-                        if (loggingEnabled)
-                        {
-                            logger.WriteToRxData(rxData[currentRxIndex].Text);
-                        }
-                        currentRxIndex += 1;
-                    }
+                    currentRxIndex++;
                 }
-
-
             }
+        
         }
     }
 

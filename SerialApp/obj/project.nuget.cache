@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "STZQsIRny4Rvf/6CqfSNqcgDS/U+RTbXXuYqhXyoBkRVlVmRigiE3AuBrH3aMCSy4QOfxl3gbsZlTxMKSZq9Yw==",
+  "dgSpecHash": "s1YLmJrJlmugrQaB9yCUER/1Zi/jftMG59IQnoDhB8u1/z9MOcyE6rIdGgsDDqrTh4n7xeH6By4qLIBZMMmOug==",
   "success": true,
   "projectFilePath": "C:\\Users\\trobbins\\Desktop\\SerialApp\\SerialApp\\SerialApp.csproj",
   "expectedPackageFiles": [
@@ -39,7 +39,11 @@
     "C:\\Users\\trobbins\\.nuget\\packages\\system.security.principal.windows\\4.7.0\\system.security.principal.windows.4.7.0.nupkg.sha512",
     "C:\\Users\\trobbins\\.nuget\\packages\\system.text.encoding\\4.3.0\\system.text.encoding.4.3.0.nupkg.sha512",
     "C:\\Users\\trobbins\\.nuget\\packages\\system.threading.tasks\\4.3.0\\system.threading.tasks.4.3.0.nupkg.sha512",
-    "C:\\Users\\trobbins\\.nuget\\packages\\system.windows.extensions\\4.7.0\\system.windows.extensions.4.7.0.nupkg.sha512"
+    "C:\\Users\\trobbins\\.nuget\\packages\\system.windows.extensions\\4.7.0\\system.windows.extensions.4.7.0.nupkg.sha512",
+    "C:\\Users\\trobbins\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.16\\microsoft.netcore.app.ref.6.0.16.nupkg.sha512",
+    "C:\\Users\\trobbins\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.16\\microsoft.windowsdesktop.app.ref.6.0.16.nupkg.sha512",
+    "C:\\Users\\trobbins\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.16\\microsoft.aspnetcore.app.ref.6.0.16.nupkg.sha512",
+    "C:\\Users\\trobbins\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\6.0.16\\microsoft.netcore.app.host.win-x64.6.0.16.nupkg.sha512"
   ],
   "logs": []
 }

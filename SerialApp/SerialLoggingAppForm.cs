@@ -9,7 +9,7 @@ using System.IO.Ports;
 /// </summary>
 public abstract class SerialLoggingAppForm : AppForm
 {
-    protected SQLiteCommLogger logger;
+    protected SQLiteCommLogger logger = null;
     protected TextBox clock;
     protected PortChat serialPort;
     public Dictionary<string, Parity> ParityOptions => PortChat.ParityOptions;
@@ -27,15 +27,29 @@ public abstract class SerialLoggingAppForm : AppForm
         this.clock.Text = DateTime.Now.ToString("MM-dd-yyyy hh:mm:ss"); // Display current time in textbox
     }
 
+    public SerialLoggingAppForm(SQLiteCommLogger newLogger) : base()
+    {
+        
+        this.ClientSize = new System.Drawing.Size(725, 348);
+        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+        this.Text = "Serial COMs";
+        logger = newLogger;//new SQLiteCommLogger();
+
+
+
+        serialPort = new PortChat();
+    }
+
+
     public SerialLoggingAppForm() : base()
     {
         
         this.ClientSize = new System.Drawing.Size(725, 348);
         this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
         this.Text = "Serial COMs";
-        logger = new SQLiteCommLogger();
+        // logger = new SQLiteCommLogger();
 
-        
+
 
         serialPort = new PortChat();
     }
