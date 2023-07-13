@@ -376,6 +376,9 @@ public partial class CommsApp : SerialLoggingAppForm
         statusButton.Click += new EventHandler((_, _) => StatusButtonClick());
         statusButton.Click += new EventHandler((_, _) => SetStatusInfo());
         comInfoPanel.Controls.Add(statusButton);
+
+        comComboBox.Click += ComBoxDrop;
+        comComboBox.Click += ReloadPorts;
     }
 
 
