@@ -897,7 +897,7 @@ public partial class CommsApp : SerialLoggingAppForm
         var exitMenuItem = new ToolStripMenuItem("&Exit", null, (_, _) => OnClose());
         var advancedMenuItem = new ToolStripMenuItem("Advanced");
         
-        exitMenuItem.ShortcutKeys = Keys.Control | Keys.X;
+        //exitMenuItem.ShortcutKeys = Keys.Control | Keys.X;
 
         var showAdvancedParametersMenuItem = new ToolStripMenuItem("Show Advanced");
         showAdvancedParametersMenuItem.CheckOnClick = true;
