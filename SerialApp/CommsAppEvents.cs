@@ -217,9 +217,11 @@ public partial class CommsApp : SerialLoggingAppForm
             SetTxDataBoxes();
         }
 
+        currentRxIndex = 0;
         rxEnabled = true;
         rxEnableBox.Checked = true;
-
+        
+        currentTxIndex = 0;
         txEnabled = true;
         txEnableBox.Checked = true;
         
